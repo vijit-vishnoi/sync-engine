@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/vijit-vishnoi/internal/websocket"
 )
 
 func main() {
@@ -16,6 +18,7 @@ func main() {
 		w.WriteHeader(http.StatusOK);
 		w.Write([]byte("Health check passed"));
 	})
+	r.Get("/ws",websocket.HandleConnection)
 	fmt.Println("Server is listening to port:",port);
 	err:=http.ListenAndServe(":"+port,r)
 	if err!=nil{
