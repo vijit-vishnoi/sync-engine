@@ -5,9 +5,7 @@ import (
 	"net/http"
 )
 
-
-
-func HandleConnection(w http.ResponseWriter,r *http.Request){
+func HandleConnection(hub *Hub,w http.ResponseWriter,r *http.Request){
 	conn,err:=upgrader.Upgrade(w,r,nil)
 	if err!=nil{
 		log.Println(err)
@@ -24,4 +22,9 @@ func HandleConnection(w http.ResponseWriter,r *http.Request){
 			return 
 		}
 	}
+	
+	defer func ()  {
+		client.hub.unregister<-client
+		conn.Close()
+	}()
 }

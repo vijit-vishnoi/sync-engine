@@ -12,13 +12,17 @@ import (
 func main() {
 	port:="8080"
 	r:=chi.NewRouter();
-	r.Use(middleware.Logger);
-	r.Use(middleware.Recoverer);
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 	r.Get("/health",func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK);
 		w.Write([]byte("Health check passed"));
 	})
-	r.Get("/ws",websocket.HandleConnection)
+	hub:=websocket.NewHub()
+	go hub.Run()
+	r.Get("/ws",func(w http.ResponseWriter,r *http.Request){
+		websocket.HandleConnection(hub,w,r)
+	})
 	fmt.Println("Server is listening to port:",port);
 	err:=http.ListenAndServe(":"+port,r)
 	if err!=nil{
