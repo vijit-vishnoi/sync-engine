@@ -3,6 +3,7 @@ package websocket
 import (
 	"log"
 	"net/http"
+	"github.com/gorilla/websocket"
 )
 
 func HandleConnection(hub *Hub,w http.ResponseWriter,r *http.Request){
@@ -21,6 +22,7 @@ func HandleConnection(hub *Hub,w http.ResponseWriter,r *http.Request){
 		client.hub.unregister<-client
 		conn.Close()
 	}()
+	go client.writePump()
 	client.readPump()
 }
 func (c *Client) readPump(){
@@ -31,5 +33,15 @@ func (c *Client) readPump(){
 			return
 		}
 		c.hub.broadcast<-p
+	}
+}
+func (c *Client) writePump(){
+	for message:=range c.send{
+		err:=c.conn.WriteMessage(websocket.TextMessage,message)
+		if err!=nil{
+			log.Println(err)
+			return
+		}
+
 	}
 }
