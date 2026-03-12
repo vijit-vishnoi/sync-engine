@@ -11,20 +11,25 @@ func HandleConnection(hub *Hub,w http.ResponseWriter,r *http.Request){
 		log.Println(err)
 		return
 	}
-	for{
-		messageType,p,err:=conn.ReadMessage()
-		if err!=nil{
-			log.Println(err)  
-			return
-		}
-		if err:=conn.WriteMessage(messageType,p);err!=nil{
-			log.Println(err)
-			return 
-		}
+	client:=&Client{
+		hub:hub,
+		conn:conn,
+		send:make(chan []byte,256),
 	}
-	
+	client.hub.register<-client
 	defer func ()  {
 		client.hub.unregister<-client
 		conn.Close()
 	}()
+	client.readPump()
+}
+func (c *Client) readPump(){
+	for{
+		_,p,err:=c.conn.ReadMessage()
+		if err!=nil{
+			log.Println(err) 
+			return
+		}
+		c.hub.broadcast<-p
+	}
 }
