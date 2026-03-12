@@ -14,7 +14,7 @@ func HandleConnection(hub *Hub,w http.ResponseWriter,r *http.Request){
 	for{
 		messageType,p,err:=conn.ReadMessage()
 		if err!=nil{
-			log.Println(err)
+			log.Println(err)  
 			return
 		}
 		if err:=conn.WriteMessage(messageType,p);err!=nil{
