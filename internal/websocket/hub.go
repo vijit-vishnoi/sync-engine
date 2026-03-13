@@ -1,6 +1,9 @@
 package websocket
 
 import (
+	"encoding/json"
+	"log"
+
 	"github.com/gorilla/websocket"
 	"github.com/vijit-vishnoi/internal/crdt"
 )
@@ -21,6 +24,7 @@ type Client struct {
 type SyncMessage struct{
 	Type string `json:"type"`
 	Char crdt.Char `json:"char"`
+	FullDoc []crdt.Char `json:"fullDoc,omitempty"`
 }
 func NewHub() *Hub{
 	h:=&Hub{
@@ -37,6 +41,14 @@ func (h *Hub)Run(){
 		select {
 		case client:=<-h.register:
 			h.clients[client]=true;
+			initMsg:=SyncMessage{
+				Type:"init",
+				FullDoc: h.document.Chars,
+			}
+			initBytes,err:=json.Marshal(initMsg)
+			if err==nil{
+				client.send<-initBytes
+			}
 		case client:=<-h.unregister:
 			if _,ok:=h.clients[client];ok{
 				delete(h.clients,client)
@@ -44,6 +56,18 @@ func (h *Hub)Run(){
 			}
 			 
 		case message:=<-h.broadcast:
+			var syncMsg SyncMessage
+			err:=json.Unmarshal(message,&syncMsg)
+			if err==nil{
+				switch syncMsg.Type {
+				case "insert":
+					h.document.Insert(syncMsg.Char)
+				case "delete":
+					h.document.Delete(syncMsg.Char)
+				}
+			}else{
+				log.Println("Error parsing message:",err)
+			}
 			for client:=range h.clients{
 				select {
 				case client.send<-message:
