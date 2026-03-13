@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/vijit-vishnoi/internal/crdt"
 )
 
 type Hub struct {
@@ -9,6 +10,7 @@ type Hub struct {
 	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
+	document *crdt.Document
 }
 
 type Client struct {
@@ -16,12 +18,17 @@ type Client struct {
 	conn *websocket.Conn
 	send chan []byte
 }
+type SyncMessage struct{
+	Type string `json:"type"`
+	Char crdt.Char `json:"char"`
+}
 func NewHub() *Hub{
 	h:=&Hub{
 		register: make(chan *Client),
 		unregister: make(chan *Client),
 		clients: make(map[*Client]bool),
 		broadcast: make(chan []byte),
+		document: &crdt.Document{},
 	}
 	return h
 }
