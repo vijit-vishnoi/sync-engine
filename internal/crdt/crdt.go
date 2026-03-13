@@ -30,9 +30,38 @@ func (doc *Document) Delete(char Char){
 	}
 }
 
+func GeneratePositionBetween(pos1,pos2 []Identifier,siteId string)[]Identifier{
+	var newPos []Identifier
+	level:=0
+	for{
+		var id1,id2 Identifier
+		if level<len(pos1){
+			id1=pos1[level]
+		} else{
+			id1=Identifier{Digit: 0,SiteId: siteId}
+		}
+		if level <len(pos2){
+			id2=pos2[level]
+		}else{
+			id2=Identifier{Digit: 100000,SiteId: siteId}
+		}
+		if id2.Digit-id1.Digit<=1{
+			newPos=append(newPos, id1)
+			level++
+			continue
+		}
+		newIdentifier:=Identifier{
+			Digit: id1.Digit+1,
+			SiteId: siteId,
+		}
+		newPos=append(newPos, newIdentifier)
+		return newPos
+	}
+}
+
 func ComparePosition(pos1,pos2 []Identifier)int{
-	minLenth:=min(len(pos1),len(pos2))
-	for  i:=0;i<minLenth;i++{
+	minLength:=min(len(pos1),len(pos2))
+	for  i:=0;i<minLength;i++{
 		id1:=pos1[i]
 		id2:=pos2[i]
 		if id1.Digit<id2.Digit{
