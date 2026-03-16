@@ -24,7 +24,37 @@ function comparePosition(pos1:Identifier[], pos2:Identifier[]):number{
 	return 0
 }
 
+function generatePositionBetween(pos1:Identifier[],pos2:Identifier[],siteId:string):Identifier[]{
+    const newPos:Identifier[]=[];
+    var level=0
+	while(true){
+		let id1:Identifier
+		let id2:Identifier
+		if (level<pos1.length){
+			id1=pos1[level]
+		} else{
+			id1={digit: 0,siteId: siteId}
+		}
+		if (level <pos2.length){
+			id2=pos2[level]
+		}else{
+			id2={digit: 100000,siteId: siteId}
+		}
+		if (id2.digit-id1.digit<=1){
+			newPos.push(id1)
+			level++
+			continue
+		}
+		var newIdentifier={
+			digit: id1.digit+1,
+			siteId: siteId,
+		}
+		newPos.push(newIdentifier)
+		return newPos
+	}
+}
 
 export {
-    comparePosition
+    comparePosition,
+    generatePositionBetween
 }
