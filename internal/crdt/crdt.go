@@ -73,7 +73,7 @@ func ComparePosition(pos1,pos2 []Identifier)int{
 		if id1.SiteId<id2.SiteId{
 			return -1
 		} else if id1.SiteId>id2.SiteId{
-			return 1
+			return 1;
 		}
 	}
 	if len(pos1)<len(pos2) {
@@ -81,6 +81,9 @@ func ComparePosition(pos1,pos2 []Identifier)int{
 	} 
 	if len(pos1)>len(pos2){
 		return 1
+
+
 	}
 	return 0
+
 }
