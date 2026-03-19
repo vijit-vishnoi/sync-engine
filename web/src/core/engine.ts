@@ -1,3 +1,4 @@
+import { CRDTChar } from './../types/crdt';
 import type { CRDTChar, Identifier } from "../types/crdt";
 
 
@@ -86,6 +87,17 @@ class CRDTEngine{
 			return ind;
 		}
 		else return -1;
+	}
+	localInsert(index:number,value:number):CRDTChar{
+		const pos1=index-1>=0?this.document[index-1].position:[];
+		const pos2=index<this.document.length?this.document[index].position:[];
+		let newPos=generatePositionBetween(pos1,pos2,this.siteId);
+		const newChar:CRDTChar={
+			value:value,
+			position:newPos
+		};
+		this.document.splice(index,0,newChar)
+		return newChar
 	}
 }
 export {
