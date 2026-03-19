@@ -1,4 +1,3 @@
-import { CRDTChar } from './../types/crdt';
 import type { CRDTChar, Identifier } from "../types/crdt";
 
 
@@ -98,6 +97,12 @@ class CRDTEngine{
 		};
 		this.document.splice(index,0,newChar)
 		return newChar
+	}
+	localDelete(index:number):CRDTChar|null{
+		var ch=this.document[index];
+		if(!ch) return null
+ 		this.document.splice(index,1);
+		return ch
 	}
 }
 export {
