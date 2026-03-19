@@ -1,4 +1,5 @@
-import type { Identifier } from "../types/crdt";
+import type { CRDTChar, Identifier } from "../types/crdt";
+
 
 function comparePosition(pos1:Identifier[], pos2:Identifier[]):number{
     var minLength=Math.min(pos1.length,pos2.length)
@@ -54,7 +55,41 @@ function generatePositionBetween(pos1:Identifier[],pos2:Identifier[],siteId:stri
 	}
 }
 
+class CRDTEngine{
+	siteId: string;
+	document:CRDTChar[];
+
+	constructor(siteId:string,initialDoc:CRDTChar[]=[]){
+		this.siteId=siteId;
+		this.document=initialDoc;
+	}
+	findIndex(char:CRDTChar):number{
+		let left=0;
+		let right=this.document.length;
+		while(left<right){
+			const mid=Math.floor(left+(right-left)/2);
+			let res=comparePosition(this.document[mid].position,char.position);
+			if(res==-1) left=mid+1;
+			else right=mid;
+		}
+		return left;
+	}
+	remoteInsert(char:CRDTChar):number{
+		let ind=this.findIndex(char);
+		this.document.splice(ind,0,char);
+		return ind;
+	}
+	remoteDelete(char:CRDTChar):number{
+		let ind=this.findIndex(char);
+		if(this.document[ind] && comparePosition(this.document[ind].position,char.position)==0){
+			this.document.splice(ind,1)
+			return ind;
+		}
+		else return -1;
+	}
+}
 export {
-    comparePosition,
-    generatePositionBetween
+	comparePosition,
+	generatePositionBetween,
+	CRDTEngine
 }
