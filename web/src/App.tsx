@@ -16,7 +16,34 @@ function App() {
       engineRef.current=new CRDTEngine(siteId,initialDoc);
     }
   }, [initialDoc,siteId]);
+  const monacoRef=useRef<any>(null);
+  const handleEditorDidMount=(editor:any,monaco:any)=>{
+    monacoRef.current=editor;
+  };
 
+  const handleEditorChange=(value:string | undefined,event:any)=>{
+    const engine=engineRef.current;
+    if(!engine)return;
+    event.changes.forEach((change:any)=>{
+      const index=change.rangeOffset;
+      const text=change.text;
+      if(text.length>0){
+        for(let i=0;i<text.length; i++){
+          const charValue=text.charCodeAt(i);
+          let newChar=engine.localInsert(index+i,charValue);
+          broadcastOperation('insert',newChar)
+          console.log(`Inserted '${text}' at index ${index}`);
+        }
+      } else{
+        let length=change.rangeLength;
+        for(let i=0;i<length;i++){
+          const deleteChar=engine.localDelete(index)
+          if(deleteChar) broadcastOperation('delete',deleteChar);
+        }
+        console.log(`Deleted ${change.rangeLength} characters at index ${index}`);
+      }
+    });
+  };
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
       
@@ -39,7 +66,8 @@ function App() {
             minimap: { enabled: false },
             fontSize: 16,
           }}
-          
+          onMount={handleEditorDidMount}
+          onChange={handleEditorChange}
         />
       </div>
 
