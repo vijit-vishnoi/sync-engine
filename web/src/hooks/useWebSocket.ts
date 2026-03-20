@@ -27,12 +27,12 @@ export function useWebSocket(localSiteId: string) {
     ws.current.onmessage = (event) => {
       const message: SyncMessage = JSON.parse(event.data);
 
-      if (message.type === 'init' && message.fullDoc) {
-        setInitialDoc(message.fullDoc);
+      if (message.type === 'init' ) {
+        setInitialDoc(message.fullDoc|| []);
         return;
       }
 
-      if (message.char && message.char.position.length > 0) {
+      if (message.char && message.char.position && message.char.position.length > 0) {
         const messageSiteId = message.char.position[0].siteId;
         if (messageSiteId === localSiteId) {
           return; 
