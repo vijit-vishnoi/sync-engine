@@ -3,14 +3,14 @@ import type { SyncMessage, CRDTChar } from '../types/crdt';
 
 const WS_URL = 'ws://localhost:8080/ws';
 
-export function useWebSocket(localSiteId: string) {
+export function useWebSocket(localSiteId: string,onRemoteMessage:(msg:SyncMessage)=>void) {
   const ws = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  
-
-  const [remoteOperation, setRemoteOperation] = useState<SyncMessage | null>(null);
   const [initialDoc, setInitialDoc] = useState<CRDTChar[]>([]);
-
+  const callbackRef=useRef(onRemoteMessage);
+  useEffect(()=>{
+    callbackRef.current=onRemoteMessage;
+  },[onRemoteMessage]);
   useEffect(() => {
     ws.current = new WebSocket(WS_URL);
 
@@ -39,7 +39,7 @@ export function useWebSocket(localSiteId: string) {
         }
       }
 
-      setRemoteOperation(message);
+      callbackRef.current(message);
     };
 
     return () => {
@@ -57,7 +57,6 @@ export function useWebSocket(localSiteId: string) {
   return {
     isConnected,
     initialDoc,
-    remoteOperation,
     broadcastOperation,
   };
 }

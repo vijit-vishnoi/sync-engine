@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { CRDTEngine } from './core/engine';
 import './App.css';
+import type { SyncMessage } from './types/crdt';
 
 const generateSiteId = () => Math.random().toString(36).substring(2, 9);
 
@@ -11,14 +12,8 @@ function App() {
   const engineRef = useRef<CRDTEngine | null>(null);
   const monacoRef=useRef<any>(null);
   const isRemoteUpdate=useRef(false);
-  const {isConnected,initialDoc,remoteOperation,broadcastOperation}=useWebSocket(siteId);
-  useEffect(() => {
-    if (!engineRef.current && initialDoc) {
-      console.log("Initializing CRDT Engine with server state...");
-      engineRef.current=new CRDTEngine(siteId,initialDoc);
-    }
-  }, [initialDoc,siteId]);
-  useEffect(()=>{
+  const handleRemoteMessage=useCallback((remoteOperation:SyncMessage)=>{
+
     if(!remoteOperation || !remoteOperation.char||!engineRef.current || !monacoRef.current) return ;
     const engine=engineRef.current;
     const editor=monacoRef.current;
@@ -49,10 +44,18 @@ function App() {
       }
     }
     isRemoteUpdate.current=false;
-  },[remoteOperation]);
-  
+  },[]);
+  const {isConnected,initialDoc,broadcastOperation}=useWebSocket(siteId,handleRemoteMessage);
+  useEffect(()=>{
+    if(!engineRef.current && initialDoc){
+      console.log("Initializing CRDT Engine with server state...");
+      engineRef.current=new CRDTEngine(siteId,initialDoc);
+    }
+  },[initialDoc,siteId]);
+
   const handleEditorDidMount=(editor:any,monaco:any)=>{
     monacoRef.current=editor;
+    editor.getModel().setEOL(0);
   };
 
   const handleEditorChange=(value:string | undefined,event:any)=>{
@@ -62,20 +65,19 @@ function App() {
     event.changes.forEach((change:any)=>{
       const index=change.rangeOffset;
       const text=change.text;
+      const length=change.rangeLength;
+      if(length>0){
+        for(let i=0;i<length;i++){
+          const deleteChar=engine.localDelete(index);
+          if(deleteChar)broadcastOperation('delete',deleteChar);
+        }
+      }
       if(text.length>0){
         for(let i=0;i<text.length; i++){
           const charValue=text.charCodeAt(i);
           let newChar=engine.localInsert(index+i,charValue);
           broadcastOperation('insert',newChar)
-          console.log(`Inserted '${text}' at index ${index}`);
         }
-      } else{
-        let length=change.rangeLength;
-        for(let i=0;i<length;i++){
-          const deleteChar=engine.localDelete(index)
-          if(deleteChar) broadcastOperation('delete',deleteChar);
-        }
-        console.log(`Deleted ${change.rangeLength} characters at index ${index}`);
       }
     });
   };
