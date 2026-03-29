@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/vijit-vishnoi/internal/crdt"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Hub struct {
@@ -14,6 +15,7 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 	document *crdt.Document
+	collection *mongo.Collection
 }
 
 type Client struct {
@@ -27,13 +29,14 @@ type SyncMessage struct{
 	FullDoc []crdt.Char `json:"fullDoc,omitempty"`
 	SenderId string `json:"senderId,omitempty"`
 }
-func NewHub() *Hub{
+func NewHub(collection *mongo.Collection) *Hub{
 	h:=&Hub{
 		register: make(chan *Client),
 		unregister: make(chan *Client),
 		clients: make(map[*Client]bool),
 		broadcast: make(chan []byte),
 		document: &crdt.Document{},
+		collection: collection,
 	}
 	return h
 }
