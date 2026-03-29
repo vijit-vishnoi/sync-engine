@@ -12,6 +12,7 @@ function App() {
   const engineRef = useRef<CRDTEngine | null>(null);
   const monacoRef=useRef<any>(null);
   const isRemoteUpdate=useRef(false);
+
   const handleRemoteMessage=useCallback((remoteOperation:SyncMessage)=>{
 
     if(!remoteOperation || !remoteOperation.char||!engineRef.current || !monacoRef.current) return ;
@@ -20,30 +21,32 @@ function App() {
     const model=editor.getModel();
     
     isRemoteUpdate.current=true;
-
-    if(remoteOperation.type=='insert'){
-      const index=engine.remoteInsert(remoteOperation.char);
-      const pos=model.getPositionAt(index);
-      const text=String.fromCharCode(remoteOperation.char.value);
-
-      editor.executeEdits("remote",[{
-        range:{startLineNumber:pos.lineNumber,startColumn:pos.column,endLineNumber:pos.lineNumber,endColumn:pos.column},
-        text:text,
-        forceMoveMarkers:true
-      }]);
-    } else if(remoteOperation.type=='delete'){
-      const index=engine.remoteDelete(remoteOperation.char);
-      if(index!=-1){
-        const startPos=model.getPositionAt(index);
-        const endPos=model.getPositionAt(index+1);
+    try{
+      if(remoteOperation.type=='insert'){
+        const index=engine.remoteInsert(remoteOperation.char);
+        const pos=model.getPositionAt(index);
+        const text=String.fromCharCode(remoteOperation.char.value);
 
         editor.executeEdits("remote",[{
-          range:{startLineNumber:startPos.lineNumber,startColumn:startPos.column,endLineNumber:endPos.lineNumber,endColumn:endPos.column},
-          text:""
+          range:{startLineNumber:pos.lineNumber,startColumn:pos.column,endLineNumber:pos.lineNumber,endColumn:pos.column},
+          text:text,
+          forceMoveMarkers:true
         }]);
+      } else if(remoteOperation.type=='delete'){
+        const index=engine.remoteDelete(remoteOperation.char);
+        if(index!=-1){
+          const startPos=model.getPositionAt(index);
+          const endPos=model.getPositionAt(index+1);
+
+          editor.executeEdits("remote",[{
+            range:{startLineNumber:startPos.lineNumber,startColumn:startPos.column,endLineNumber:endPos.lineNumber,endColumn:endPos.column},
+            text:""
+          }]);
+        }
       }
+    } finally{
+      isRemoteUpdate.current=false;
     }
-    isRemoteUpdate.current=false;
   },[]);
   const {isConnected,initialDoc,broadcastOperation}=useWebSocket(siteId,handleRemoteMessage);
   useEffect(()=>{
@@ -64,7 +67,7 @@ function App() {
     if(isRemoteUpdate.current)return
     event.changes.forEach((change:any)=>{
       const index=change.rangeOffset;
-      const text=change.text;
+      const text=change.text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
       const length=change.rangeLength;
       if(length>0){
         for(let i=0;i<length;i++){

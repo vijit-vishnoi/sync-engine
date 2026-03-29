@@ -32,11 +32,8 @@ export function useWebSocket(localSiteId: string,onRemoteMessage:(msg:SyncMessag
         return;
       }
 
-      if (message.char && message.char.position && message.char.position.length > 0) {
-        const messageSiteId = message.char.position[0].siteId;
-        if (messageSiteId === localSiteId) {
-          return; 
-        }
+      if (message.senderId === localSiteId) {
+        return; 
       }
 
       callbackRef.current(message);
@@ -49,10 +46,10 @@ export function useWebSocket(localSiteId: string,onRemoteMessage:(msg:SyncMessag
 
   const broadcastOperation = useCallback((type: 'insert' | 'delete', char: CRDTChar) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      const message: SyncMessage = { type, char };
+      const message: SyncMessage= { type, char,senderId:localSiteId };
       ws.current.send(JSON.stringify(message));
     }
-  }, []);
+  }, [localSiteId]);
 
   return {
     isConnected,

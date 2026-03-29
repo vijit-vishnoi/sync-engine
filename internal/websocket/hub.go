@@ -25,6 +25,7 @@ type SyncMessage struct{
 	Type string `json:"type"`
 	Char crdt.Char `json:"char"`
 	FullDoc []crdt.Char `json:"fullDoc,omitempty"`
+	SenderId string `json:"senderId,omitempty"`
 }
 func NewHub() *Hub{
 	h:=&Hub{

@@ -12,4 +12,5 @@ export interface SyncMessage {
   type: 'init' | 'insert' | 'delete';
   char?: CRDTChar;
   fullDoc?: CRDTChar[];
+  senderId?:string;
 }
