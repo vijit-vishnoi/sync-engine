@@ -1,11 +1,14 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/gorilla/websocket"
 	"github.com/vijit-vishnoi/internal/crdt"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
@@ -29,6 +32,12 @@ type SyncMessage struct{
 	FullDoc []crdt.Char `json:"fullDoc,omitempty"`
 	SenderId string `json:"senderId,omitempty"`
 }
+
+type MongoDocument struct{
+	ID string `bson:"_id"`
+	Chars []crdt.Char `bson:"chars"`
+}
+
 func NewHub(collection *mongo.Collection) *Hub{
 	h:=&Hub{
 		register: make(chan *Client),
@@ -38,6 +47,7 @@ func NewHub(collection *mongo.Collection) *Hub{
 		document: &crdt.Document{},
 		collection: collection,
 	}
+	h.loadDocument()
 	return h
 }
 func (h *Hub)Run(){
@@ -82,4 +92,28 @@ func (h *Hub)Run(){
 			}
 		}
 	}
+}
+func (h *Hub) loadDocument(){
+	ctx:=context.TODO()
+	var mongoDoc MongoDocument
+	err:=h.collection.FindOne(ctx,bson.M{"_id":"global-doc"}).Decode(&mongoDoc)
+	switch err {
+	case nil:
+		h.document.Chars=mongoDoc.Chars
+		fmt.Println("Loaded existing document from MongoDB!")
+	case mongo.ErrNoDocuments:
+		emptyDoc:=MongoDocument{
+			ID:"global-doc",
+			Chars:[]crdt.Char{},
+		}
+		_,insertErr:=h.collection.InsertOne(ctx,emptyDoc)
+		if insertErr!=nil{
+			fmt.Println("Error inserting new document",insertErr)
+		} else{
+			fmt.Println("Created new global document in MongoDB!")
+		}
+	default:
+		fmt.Println("Error querying MongoDB: ",err)
+	}
+	
 }
