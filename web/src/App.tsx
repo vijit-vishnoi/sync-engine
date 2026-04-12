@@ -5,14 +5,19 @@ import { CRDTEngine } from './core/engine';
 import './App.css';
 import type { SyncMessage } from './types/crdt';
 
-const generateSiteId = () => Math.random().toString(36).substring(2, 9);
+const generateId = () => Math.random().toString(36).substring(2, 9);
 
 function App() {
-  const [siteId] = useState(generateSiteId());
+  const [siteId] = useState(generateId());
   const engineRef = useRef<CRDTEngine | null>(null);
   const monacoRef=useRef<any>(null);
   const isRemoteUpdate=useRef(false);
-
+  const path=window.location.pathname;
+  let roomId=path.slice(1);
+  if(!roomId){
+    roomId=generateId();
+    window.location.replace('/'+roomId);
+  }
   const handleRemoteMessage=useCallback((remoteOperation:SyncMessage)=>{
 
     if(!remoteOperation || !remoteOperation.char||!engineRef.current || !monacoRef.current) return ;
@@ -48,7 +53,7 @@ function App() {
       isRemoteUpdate.current=false;
     }
   },[]);
-  const {isConnected,initialDoc,broadcastOperation}=useWebSocket(siteId,handleRemoteMessage);
+  const {isConnected,initialDoc,broadcastOperation}=useWebSocket(siteId,roomId,handleRemoteMessage);
   useEffect(()=>{
     if(!engineRef.current && initialDoc!==null){
       console.log("Initializing CRDT Engine with server state...");

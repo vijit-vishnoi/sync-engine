@@ -26,13 +26,14 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	fmt.Println("Connectied to MongoDB!")
+	fmt.Println("Connected to MongoDB!")
 	err=client.Ping(ctx,nil)
 	if err!=nil{
 		fmt.Println(err)
 		panic(err)
 	}
 	collection:=client.Database("syncengine").Collection("documents")
+	manager:=websocket.NewRoomManager(collection)
 	r:=chi.NewRouter();
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -41,9 +42,9 @@ func main() {
 		w.Write([]byte("Health check passed"));
 	})
 
-	hub:=websocket.NewHub(collection)
-	go hub.Run()
-	r.Get("/ws",func(w http.ResponseWriter,r *http.Request){
+	r.Get("/ws/{roomId}",func(w http.ResponseWriter,r *http.Request){
+		roomId:=chi.URLParam(r,"roomId")
+		hub:=manager.GetOrCreateRoom(roomId)
 		websocket.HandleConnection(hub,w,r)
 	})
 	fmt.Println("Server is listening to port:",port);

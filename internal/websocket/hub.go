@@ -20,6 +20,7 @@ type Hub struct {
 	document *crdt.Document
 	collection *mongo.Collection
 	needsSaving bool 
+	roomId string
 }
 
 type Client struct {
@@ -39,7 +40,7 @@ type MongoDocument struct{
 	Chars []crdt.Char `bson:"chars"`
 }
 
-func NewHub(collection *mongo.Collection) *Hub{
+func NewHub(collection *mongo.Collection,roomId string) *Hub{
 	h:=&Hub{
 		register: make(chan *Client),
 		unregister: make(chan *Client),
@@ -47,6 +48,7 @@ func NewHub(collection *mongo.Collection) *Hub{
 		broadcast: make(chan []byte),
 		document: &crdt.Document{},
 		collection: collection,
+		roomId: roomId,
 	}
 	h.loadDocument()
 	return h
@@ -105,21 +107,21 @@ func (h *Hub)Run(){
 func (h *Hub) loadDocument(){
 	ctx:=context.TODO()
 	var mongoDoc MongoDocument
-	err:=h.collection.FindOne(ctx,bson.M{"_id":"global-doc"}).Decode(&mongoDoc)
+	err:=h.collection.FindOne(ctx,bson.M{"_id":h.roomId}).Decode(&mongoDoc)
 	switch err {
 	case nil:
 		h.document.Chars=mongoDoc.Chars
 		fmt.Println("Loaded existing document from MongoDB!")
 	case mongo.ErrNoDocuments:
 		emptyDoc:=MongoDocument{
-			ID:"global-doc",
+			ID:h.roomId,
 			Chars:[]crdt.Char{},
 		}
 		_,insertErr:=h.collection.InsertOne(ctx,emptyDoc)
 		if insertErr!=nil{
 			fmt.Println("Error inserting new document",insertErr)
 		} else{
-			fmt.Println("Created new global document in MongoDB!")
+			fmt.Println("Created new document in MongoDB!")
 		}
 	default:
 		fmt.Println("Error querying MongoDB: ",err)
@@ -128,7 +130,7 @@ func (h *Hub) loadDocument(){
 
 func (h *Hub) saveDocument(){
 	ctx:=context.TODO()
-	filter:=bson.M{"_id":"global-doc"}
+	filter:=bson.M{"_id":h.roomId}
 
 	update:=bson.M{
 		"$set":bson.M{

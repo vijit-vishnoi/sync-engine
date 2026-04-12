@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { SyncMessage, CRDTChar } from '../types/crdt';
 
-const WS_URL = 'ws://localhost:8080/ws';
-
-export function useWebSocket(localSiteId: string,onRemoteMessage:(msg:SyncMessage)=>void) {
+export function useWebSocket(localSiteId: string, roomId:string,onRemoteMessage:(msg:SyncMessage)=>void) {
   const ws = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [initialDoc, setInitialDoc] = useState<CRDTChar[] |null>(null);
@@ -12,7 +10,7 @@ export function useWebSocket(localSiteId: string,onRemoteMessage:(msg:SyncMessag
     callbackRef.current=onRemoteMessage;
   },[onRemoteMessage]);
   useEffect(() => {
-    ws.current = new WebSocket(WS_URL);
+    ws.current = new WebSocket(`ws://localhost:8080/ws/${roomId}`);
 
     ws.current.onopen = () => {
       console.log('Connected to SyncEngine Hub');
