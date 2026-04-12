@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-
+	"time"
 	"github.com/gorilla/websocket"
 	"github.com/vijit-vishnoi/internal/crdt"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -19,6 +19,7 @@ type Hub struct {
 	unregister chan *Client
 	document *crdt.Document
 	collection *mongo.Collection
+	needsSaving bool 
 }
 
 type Client struct {
@@ -51,6 +52,8 @@ func NewHub(collection *mongo.Collection) *Hub{
 	return h
 }
 func (h *Hub)Run(){
+	ticker:=time.NewTicker(5*time.Second)
+	defer ticker.Stop()
 	for{
 		select {
 		case client:=<-h.register:
@@ -90,6 +93,12 @@ func (h *Hub)Run(){
 					delete(h.clients,client)
 				}
 			}
+			h.needsSaving=true
+		case <-ticker.C:
+			if h.needsSaving{
+				h.saveDocument()
+				h.needsSaving=false
+			}
 		}
 	}
 }
@@ -115,5 +124,21 @@ func (h *Hub) loadDocument(){
 	default:
 		fmt.Println("Error querying MongoDB: ",err)
 	}
-	
+}
+
+func (h *Hub) saveDocument(){
+	ctx:=context.TODO()
+	filter:=bson.M{"_id":"global-doc"}
+
+	update:=bson.M{
+		"$set":bson.M{
+			"chars":h.document.Chars,
+		},
+	}
+	_,err:=h.collection.UpdateOne(ctx,filter,update)
+	if err!=nil{
+		log.Println("Failed to auto-save to MongoDB: ",err)
+	} else{
+		log.Println("Auto-saved document to MongoDB!")
+	}
 }

@@ -24,7 +24,7 @@ function App() {
     try{
       if(remoteOperation.type=='insert'){
         const index=engine.remoteInsert(remoteOperation.char);
-        const pos=model.getPositionAt(index);
+        const pos=model.getPositionAt(index+1);
         const text=String.fromCharCode(remoteOperation.char.value);
 
         editor.executeEdits("remote",[{
@@ -50,15 +50,33 @@ function App() {
   },[]);
   const {isConnected,initialDoc,broadcastOperation}=useWebSocket(siteId,handleRemoteMessage);
   useEffect(()=>{
-    if(!engineRef.current && initialDoc){
+    if(!engineRef.current && initialDoc!==null){
       console.log("Initializing CRDT Engine with server state...");
       engineRef.current=new CRDTEngine(siteId,initialDoc);
+      if(monacoRef.current && initialDoc.length>0){
+        const text=initialDoc.map(char=>String.fromCharCode(char.value)).join('');
+        isRemoteUpdate.current=true;
+        try{
+          monacoRef.current.setValue(text)
+        } finally{
+          isRemoteUpdate.current=false;
+        }
+      }
     }
   },[initialDoc,siteId]);
 
   const handleEditorDidMount=(editor:any,monaco:any)=>{
     monacoRef.current=editor;
     editor.getModel().setEOL(0);
+    if(engineRef.current && engineRef.current.document.length>0){
+      const text=engineRef.current.document.map(char=>String.fromCharCode(char.value)).join('');
+      isRemoteUpdate.current=true;
+      try{
+        editor.setValue(text);
+      } finally{
+        isRemoteUpdate.current=false
+      }
+    }
   };
 
   const handleEditorChange=(value:string | undefined,event:any)=>{
