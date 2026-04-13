@@ -49,9 +49,23 @@ export function useWebSocket(localSiteId: string, roomId:string,onRemoteMessage:
     }
   }, [localSiteId]);
 
+  const broadcastCursor=useCallback((lineNumber:number, column:number,displayName:string)=>{
+    if(ws.current && ws.current.readyState===WebSocket.OPEN){
+      const message:SyncMessage={
+        type:'cursor',
+        senderId:localSiteId,
+        lineNumber:lineNumber,
+        column:column,
+        displayName:displayName
+      }
+      ws.current.send(JSON.stringify(message));
+    }
+  },[localSiteId]);
+
   return {
     isConnected,
     initialDoc,
     broadcastOperation,
+    broadcastCursor
   };
 }

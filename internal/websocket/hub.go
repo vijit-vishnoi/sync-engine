@@ -30,9 +30,12 @@ type Client struct {
 }
 type SyncMessage struct{
 	Type string `json:"type"`
-	Char crdt.Char `json:"char"`
+	Char crdt.Char `json:"char,omitempty"`
 	FullDoc []crdt.Char `json:"fullDoc,omitempty"`
 	SenderId string `json:"senderId,omitempty"`
+	LineNumber int `json:"lineNumber,omitempty"`
+	Column int `json:"column,omitempty"`
+	DisplayName string	`json:"displayName,omitempty"`
 }
 
 type MongoDocument struct{
@@ -81,8 +84,12 @@ func (h *Hub)Run(){
 				switch syncMsg.Type {
 				case "insert":
 					h.document.Insert(syncMsg.Char)
+					h.needsSaving=true
 				case "delete":
 					h.document.Delete(syncMsg.Char)
+					h.needsSaving=true
+				case "cursor":
+
 				}
 			}else{
 				log.Println("Error parsing message:",err)
@@ -95,7 +102,6 @@ func (h *Hub)Run(){
 					delete(h.clients,client)
 				}
 			}
-			h.needsSaving=true
 		case <-ticker.C:
 			if h.needsSaving{
 				h.saveDocument()

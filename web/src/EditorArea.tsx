@@ -14,18 +14,18 @@ export function EditorArea() {
   const engineRef = useRef<CRDTEngine | null>(null);
   const monacoRef = useRef<any>(null);
   const isRemoteUpdate = useRef(false);
-
+  const remoteCursorsRef=useRef<{[key:string]:any}>({});
   const handleRemoteMessage = useCallback((remoteOperation: SyncMessage) => {
-    if (!remoteOperation || !remoteOperation.char || !engineRef.current || !monacoRef.current) return;
+    if (!remoteOperation || !engineRef.current || !monacoRef.current) return;
     const engine = engineRef.current;
     const editor = monacoRef.current;
     const model = editor.getModel();
     
     isRemoteUpdate.current = true;
     try {
-      if (remoteOperation.type === 'insert') {
+      if (remoteOperation.type === 'insert' && remoteOperation.char) {
         const index = engine.remoteInsert(remoteOperation.char);
-        const pos = model.getPositionAt(index + 1);
+        const pos = model.getPositionAt(index);
         const text = String.fromCharCode(remoteOperation.char.value);
 
         editor.executeEdits("remote", [{
@@ -33,7 +33,7 @@ export function EditorArea() {
           text: text,
           forceMoveMarkers: true
         }]);
-      } else if (remoteOperation.type === 'delete') {
+      } else if (remoteOperation.type === 'delete' && remoteOperation.char) {
         const index = engine.remoteDelete(remoteOperation.char);
         if (index !== -1) {
           const startPos = model.getPositionAt(index);
@@ -44,14 +44,36 @@ export function EditorArea() {
             text: ""
           }]);
         }
-      }
+      } else if(remoteOperation.type==='cursor'){
+            const {lineNumber,column,senderId,displayName:senderName}=remoteOperation;
+            if(!lineNumber || !column || !senderId) return ;
+            let hash=0;
+            for(let i=0;i<senderId.length;i++){
+                hash=senderId.charCodeAt(i)+((hash<<5)-hash);
+            }
+            const colorIndex=Math.abs(hash)%5;
+            if (!remoteCursorsRef.current[senderId]){
+                remoteCursorsRef.current[senderId]=editor.createDecorationsCollection([]);
+            }
+            remoteCursorsRef.current[senderId].set([{
+                range:{startLineNumber:lineNumber,startColumn:column,endLineNumber:lineNumber,
+                endColumn:column+1},
+                options:{
+                    className:`remote-cursor-bar cursor-color-${colorIndex}`,
+                    after:{
+                        content:`${senderName}`,
+                        inlineClassName:`remote-cursor-name-flag flag-color-${colorIndex}`
+                    }
+                }
+            }])
+        }
     } finally {
       isRemoteUpdate.current = false;
     }
   }, []);
 
-  const { isConnected, initialDoc, broadcastOperation } = useWebSocket(siteId, roomId!, handleRemoteMessage);
-
+  const { isConnected, initialDoc, broadcastOperation,broadcastCursor } = useWebSocket(siteId, roomId!, handleRemoteMessage);
+  
   useEffect(() => {
     if (!engineRef.current && initialDoc !== null) {
       console.log("Initializing CRDT Engine with server state...");
@@ -68,7 +90,7 @@ export function EditorArea() {
     }
   }, [initialDoc, siteId]);
 
-  const handleEditorDidMount = (editor: any, monaco: any) => {
+  const handleEditorDidMount = (editor: any) => {
     monacoRef.current = editor;
     editor.getModel().setEOL(0);
     if (engineRef.current && engineRef.current.document.length > 0) {
@@ -80,9 +102,14 @@ export function EditorArea() {
         isRemoteUpdate.current = false;
       }
     }
+    editor.onDidChangeCursorPosition((e:any)=>{
+        if(!isRemoteUpdate.current){
+            broadcastCursor(e.position.lineNumber,e.position.column,displayName);
+        }
+    })
   };
 
-  const handleEditorChange = (value: string | undefined, event: any) => {
+  const handleEditorChange = (_value: string | undefined, event: any) => {
     const engine = engineRef.current;
     if (!engine) return;
     if (isRemoteUpdate.current) return;
@@ -99,10 +126,12 @@ export function EditorArea() {
         }
       }
       if (text.length > 0) {
+        let currentInsertIndex=index;
         for (let i = 0; i < text.length; i++) {
           const charValue = text.charCodeAt(i);
-          let newChar = engine.localInsert(index + i, charValue);
+          let newChar = engine.localInsert(currentInsertIndex, charValue);
           broadcastOperation('insert', newChar);
+          currentInsertIndex++;
         }
       }
     });
