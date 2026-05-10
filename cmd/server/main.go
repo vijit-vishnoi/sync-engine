@@ -45,7 +45,7 @@ func main() {
 	r.Get("/ws/{roomId}",func(w http.ResponseWriter,r *http.Request){
 		roomId:=chi.URLParam(r,"roomId")
 		hub:=manager.GetOrCreateRoom(roomId)
-		websocket.HandleConnection(hub,w,r)
+		websocket.HandleConnection(hub,w,r);
 	})
 	fmt.Println("Server is listening to port:",port);
 	err=http.ListenAndServe(":"+port,r)
