@@ -1,5 +1,9 @@
 package crdt
-import ("sort")
+
+import (
+	"sort"
+	"strings"
+)
 type Identifier struct{
 	Digit int `json:"digit"`
 	SiteId string `json:"siteId"`
@@ -86,4 +90,12 @@ func ComparePosition(pos1,pos2 []Identifier)int{
 	}
 	return 0
 
+}
+
+func (d* Document)ToString()string{
+	var sb strings.Builder
+	for  i:=0;i<len(d.Chars);i++{
+		sb.WriteRune(d.Chars[i].Value)
+	}
+	return sb.String()
 }

@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"time"
+
 	"github.com/gorilla/websocket"
 	"github.com/vijit-vishnoi/internal/crdt"
+	"github.com/vijit-vishnoi/internal/executor"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -21,6 +23,7 @@ type Hub struct {
 	collection *mongo.Collection
 	needsSaving bool 
 	roomId string
+	executor executor.CodeExecutor
 }
 
 type Client struct {
@@ -43,7 +46,7 @@ type MongoDocument struct{
 	Chars []crdt.Char `bson:"chars"`
 }
 
-func NewHub(collection *mongo.Collection,roomId string) *Hub{
+func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecutor) *Hub{
 	h:=&Hub{
 		register: make(chan *Client),
 		unregister: make(chan *Client),
@@ -52,6 +55,7 @@ func NewHub(collection *mongo.Collection,roomId string) *Hub{
 		document: &crdt.Document{},
 		collection: collection,
 		roomId: roomId,
+		executor:exec,
 	}
 	h.loadDocument()
 	return h
