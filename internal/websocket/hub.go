@@ -39,6 +39,8 @@ type SyncMessage struct{
 	LineNumber int `json:"lineNumber,omitempty"`
 	Column int `json:"column,omitempty"`
 	DisplayName string	`json:"displayName,omitempty"`
+	LanguageID int `json:"languageId,omitempty"`
+	Output string `json:"output,omitempty"`
 }
 
 type MongoDocument struct{
@@ -92,8 +94,21 @@ func (h *Hub)Run(){
 				case "delete":
 					h.document.Delete(syncMsg.Char)
 					h.needsSaving=true
+				case "execute":
+					codeString:=h.document.ToString()
+					result,err:=h.executor.Execute(codeString,syncMsg.LanguageID)
+					if err!=nil{
+						fmt.Println(err)
+					}
+					outputMsg:=SyncMessage{
+						Type:"terminal_output",
+						Output: result,
+					}
+					outputBytes,marshalErr:=json.Marshal(outputMsg)
+					if marshalErr==nil{
+						message=outputBytes
+					}
 				case "cursor":
-
 				}
 			}else{
 				log.Println("Error parsing message:",err)
