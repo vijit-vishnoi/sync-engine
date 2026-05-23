@@ -67,12 +67,19 @@ export function EditorArea() {
                 }
             }])
         }
-    } finally {
+        else if(remoteOperation.type==='terminal_output'){
+          setIsExecuting(false);
+          setTerminalOutput(remoteOperation.output ||"Execution finished.");
+      } 
+    }finally {
       isRemoteUpdate.current = false;
     }
   }, []);
 
-  const { isConnected, initialDoc, broadcastOperation,broadcastCursor } = useWebSocket(siteId, roomId!, handleRemoteMessage);
+  const [terminalOutput, setTerminalOutput] = useState<string>("");
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+
+  const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!, handleRemoteMessage);
   
   useEffect(() => {
     if (!engineRef.current && initialDoc !== null) {
@@ -136,7 +143,12 @@ export function EditorArea() {
       }
     });
   };
-
+  const handleRunCode = () => {
+    setIsExecuting(true);
+    setTerminalOutput("Executing code in the cloud...");
+    
+    broadcastExecute(71);
+};
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
       
@@ -149,6 +161,13 @@ export function EditorArea() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <button 
+            onClick={handleRunCode} 
+            disabled={isExecuting}
+            style={{ backgroundColor: isExecuting ? 'gray' : '#4CAF50', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: isExecuting ? 'not-allowed' : 'pointer' }}
+          >
+            {isExecuting ? 'Running...' : '▶ Run Code'}
+          </button>
           <span style={{ color: isConnected ? '#4caf50' : '#f44336', fontSize: '14px' }}>
             ● {isConnected ? 'Connected' : 'Disconnected'}
           </span>
@@ -177,7 +196,18 @@ export function EditorArea() {
           onChange={handleEditorChange}
         />
       </div>
-
+      <div style={{
+          backgroundColor: '#000000',
+          color: '#00ff00',
+          fontFamily: 'monospace',
+          padding: '15px',
+          height: '200px',
+          overflowY: 'auto',
+          borderTop: '2px solid #333',
+          whiteSpace: 'pre-wrap'
+      }}>
+          {terminalOutput || "> Output will appear here..."}
+      </div>
     </div>
   );
 }

@@ -62,10 +62,22 @@ export function useWebSocket(localSiteId: string, roomId:string,onRemoteMessage:
     }
   },[localSiteId]);
 
+  const broadcastExecute = useCallback((languageId: number) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      const message: SyncMessage = {
+        type: 'execute',
+        languageId: languageId,
+        senderId: localSiteId
+      };
+      ws.current.send(JSON.stringify(message));
+    }
+  }, [localSiteId]);
+
   return {
     isConnected,
     initialDoc,
     broadcastOperation,
-    broadcastCursor
+    broadcastCursor,
+    broadcastExecute
   };
 }

@@ -9,11 +9,13 @@ export interface CRDTChar {
 }
 
 export interface SyncMessage {
-  type: 'init' | 'insert' | 'delete' |'cursor';
+  type: 'init' | 'insert' | 'delete' |'cursor' | 'execute'| 'terminal_output';
   char?: CRDTChar;
   fullDoc?: CRDTChar[];
   senderId?:string;
   lineNumber?:number;
   column?:number;
   displayName?:string;
+  languageId?:number;
+  output?:string;
 }
