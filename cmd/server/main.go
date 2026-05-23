@@ -24,6 +24,7 @@ func main() {
 	}
 
 	clientId := os.Getenv("JDOODLE_CLIENT_ID")
+	clientSecret := os.Getenv("JDOODLE_CLIENT_SECRET")
 	port:=os.Getenv("PORT")
 	if port==""{
 		port="8080"
@@ -49,7 +50,7 @@ func main() {
 		panic(err)
 	}
 	collection:=client.Database("syncengine").Collection("documents")
-	clientSecret := os.Getenv("JDOODLE_CLIENT_SECRET")
+	
 	
 	if clientId == "" || clientSecret == "" {
 		log.Println("WARNING: JDoodle keys are missing from .env!")
