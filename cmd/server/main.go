@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 	"github.com/vijit-vishnoi/internal/executor"
 	"github.com/vijit-vishnoi/internal/websocket"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -16,6 +18,12 @@ import (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Warning: No .env file found. Using system environment variables.")
+	}
+
+	clientId := os.Getenv("JDOODLE_CLIENT_ID")
 	port:=os.Getenv("PORT")
 	if port==""{
 		port="8080"
@@ -41,7 +49,12 @@ func main() {
 		panic(err)
 	}
 	collection:=client.Database("syncengine").Collection("documents")
-	codeExec:=executor.NewPistonExecutor()
+	clientSecret := os.Getenv("JDOODLE_CLIENT_SECRET")
+	
+	if clientId == "" || clientSecret == "" {
+		log.Println("WARNING: JDoodle keys are missing from .env!")
+	}
+	codeExec:=executor.NewJDoodleExecutor(clientId,clientSecret)
 	manager:=websocket.NewRoomManager(collection,codeExec)
 	r:=chi.NewRouter();
 	r.Use(middleware.Logger)
