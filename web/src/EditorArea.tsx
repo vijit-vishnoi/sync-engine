@@ -166,42 +166,29 @@ export function EditorArea() {
     broadcastExecute(languageId);
 };
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
+    <div className="editor-layout">
       
-      <div style={{ height: '45px', padding: '0 16px', backgroundColor: '#252526', borderBottom: '1px solid #3c3c3c', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden' }}>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-          <span style={{ color: '#e0e0e0', fontSize: '15px', fontWeight: '600', letterSpacing: '0.5px' }}>SyncEngine</span>
-          <div style={{ width: '1px', height: '16px', backgroundColor: '#444' }}></div> 
-          <span style={{ color: '#888888', fontSize: '13px' }}>
-            ID: <span style={{ color: '#d4d4d4', fontFamily: "'Consolas', monospace" }}>{roomId}</span>
+      <div className="editor-top-bar">
+        <div className="top-bar-group">
+          <span className="brand-title">SyncEngine</span>
+          <div className="vertical-divider"></div>
+          <span className="room-id-display">
+            ID: <span>{roomId}</span>
           </span>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isConnected ? '#4caf50' : '#f44336', flexShrink: 0 }}></div>
-            <span style={{ color: '#cccccc', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
-              {displayName}
-            </span>
+        <div className="top-bar-group right">
+          <div className="user-status-group">
+            <div className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></div>
+            <span className="username-display" title={displayName}>{displayName}</span>
           </div>
 
-          <div style={{ width: '1px', height: '16px', backgroundColor: '#444' }}></div> 
+          <div className="vertical-divider"></div>
+          
           <select 
             value={languageId} 
             onChange={(e) => setLanguageId(Number(e.target.value))}
-            style={{ 
-              backgroundColor: '#333333', 
-              color: '#d4d4d4', 
-              border: '1px solid #444444', 
-              borderRadius: '4px',
-              padding: '4px 8px',
-              cursor: 'pointer', 
-              fontSize: '12px', 
-              outline: 'none', 
-              fontFamily: "'Inter', system-ui, sans-serif"
-            }}
+            className="language-dropdown"
           >
             <option value={71}>JavaScript</option>
             <option value={70}>Python</option>
@@ -215,26 +202,19 @@ export function EditorArea() {
             onClick={handleRunCode} 
             disabled={isExecuting}
             title="Run Code"
-            style={{ 
-              backgroundColor: 'transparent', border: 'none', 
-              cursor: isExecuting ? 'not-allowed' : 'pointer', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              padding: '4px', opacity: isExecuting ? 0.5 : 1
-            }}
+            className="icon-btn"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
           </button>
 
-          <div style={{ width: '1px', height: '16px', backgroundColor: '#444' }}></div> 
+          <div className="vertical-divider"></div>
+
           <button 
             onClick={leaveRoom}
             title="Leave Room"
-            style={{ 
-              backgroundColor: 'transparent', border: 'none', 
-              cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' 
-            }}
+            className="icon-btn"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -245,7 +225,7 @@ export function EditorArea() {
         </div>
       </div>
 
-      <div style={{ flexGrow: 1,minHeight: 0, overflow: 'hidden' }}>
+      <div className="editor-wrapper">
         <Editor
           height="100%"
           language={getMonacoLanguage(languageId)}
@@ -253,7 +233,7 @@ export function EditorArea() {
           options={{
             minimap: { enabled: false },
             fontSize: 15,
-            fontFamily: "'Fira Coda','Consolas',monospace",
+            fontFamily: "'Fira Code', 'Consolas', monospace",
             padding:{top:16},
             scrollBeyondLastLine:false,
           }}
@@ -261,59 +241,29 @@ export function EditorArea() {
           onChange={handleEditorChange}
         />
       </div>
-      <div style={{ 
-          height: isTerminalOpen ? '220px' : '55px', 
-          backgroundColor: '#1e1e1e', 
-          borderTop: '1px solid #3c3c3c', 
-          display: 'flex', 
-          flexDirection: 'column',
-          transition: 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden' 
-      }}>
-        
+
+      <div 
+        className="terminal-container"
+        style={{ height: isTerminalOpen ? '220px' : '36px' }} 
+      >
         <div 
           onClick={() => setIsTerminalOpen(!isTerminalOpen)}
-          style={{ 
-            padding: '8px 20px', 
-            borderBottom: isTerminalOpen ? '1px solid #2d2d2d' : 'none', 
-            display: 'flex', 
-            alignItems: 'center',
-            cursor: 'pointer',
-            userSelect: 'none',
-            minHeight: '35px',
-            backgroundColor: '#1e1e1e'
-          }}
+          className={`terminal-header ${isTerminalOpen ? 'open' : ''}`}
         >
           <svg 
             width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"
-            style={{ 
-              marginRight: '8px', 
-              transform: isTerminalOpen ? 'rotate(90deg)' : 'rotate(0deg)', 
-              transition: 'transform 0.2s ease' 
-            }}
+            className={`terminal-chevron ${isTerminalOpen ? 'open' : ''}`}
           >
             <path d="M6 4L10 8L6 12" stroke="#888888" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-
-          <span style={{ color: '#e0e0e0', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
-            Terminal Output
-          </span>
+          <span className="terminal-title">Terminal Output</span>
         </div>
 
-        <div style={{ 
-            flexGrow: 1, 
-            padding: '15px 20px', 
-            overflowY: 'auto', 
-            color: '#d4d4d4', 
-            fontFamily: "'Consolas', 'Courier New', monospace", 
-            fontSize: '14px',
-            lineHeight: '1.5',
-            whiteSpace: 'pre-wrap',
-            textAlign: 'left',  
-            opacity: isTerminalOpen ? 1 : 0,
-            transition: 'opacity 0.2s ease'
-        }}>
-            {terminalOutput || "Ready."}
+        <div 
+          className="terminal-body"
+          style={{ opacity: isTerminalOpen ? 1 : 0 }} 
+        >
+          {terminalOutput || "Ready."}
         </div>
       </div>
     </div>
