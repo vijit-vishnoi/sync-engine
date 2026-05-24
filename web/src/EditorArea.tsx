@@ -78,6 +78,7 @@ export function EditorArea() {
 
   const [terminalOutput, setTerminalOutput] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [languageId,setLanguageId]=useState<number>(71);
 
   const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!, handleRemoteMessage);
   
@@ -147,7 +148,7 @@ export function EditorArea() {
     setIsExecuting(true);
     setTerminalOutput("Executing code in the cloud...");
     
-    broadcastExecute(71);
+    broadcastExecute(languageId);
 };
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
@@ -161,6 +162,15 @@ export function EditorArea() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <select 
+            value={languageId} 
+            onChange={(e) => setLanguageId(Number(e.target.value))}
+            style={{ backgroundColor: '#333', color: 'white', border: '1px solid #555', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            <option value={71}>JavaScript</option>
+            <option value={70}>Python 3</option>
+            <option value={60}>Go</option>
+          </select>
           <button 
             onClick={handleRunCode} 
             disabled={isExecuting}
@@ -186,7 +196,7 @@ export function EditorArea() {
       <div style={{ flexGrow: 1 }}>
         <Editor
           height="100%"
-          defaultLanguage="javascript"
+          language={languageId===70?"python":languageId===60 ? "go" : "javascript"}
           theme="vs-dark"
           options={{
             minimap: { enabled: false },
