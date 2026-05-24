@@ -7,6 +7,18 @@ import type { SyncMessage } from './types/crdt';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
+
+const getMonacoLanguage = (id: number) => {
+  switch (id) {
+    case 71: return "javascript";
+    case 70: return "python";
+    case 60: return "go";
+    case 62: return "java";
+    case 54: return "cpp";
+    case 50: return "c";
+    default: return "javascript";
+  }
+};
 export function EditorArea() {
   const { roomId, displayName, leaveRoom } = useRoom();
   
@@ -80,6 +92,8 @@ export function EditorArea() {
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [languageId,setLanguageId]=useState<number>(71);
 
+  const [isTerminalOpen,setIsTerminalOpen]=useState<boolean>(true);
+
   const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!, handleRemoteMessage);
   
   useEffect(() => {
@@ -146,6 +160,7 @@ export function EditorArea() {
   };
   const handleRunCode = () => {
     setIsExecuting(true);
+    setIsTerminalOpen(true);
     setTerminalOutput("Executing code in the cloud...");
     
     broadcastExecute(languageId);
@@ -193,30 +208,76 @@ export function EditorArea() {
         </div>
       </div>
 
-      <div style={{ flexGrow: 1 }}>
+      <div style={{ flexGrow: 1,minHeight: 0, overflow: 'hidden' }}>
         <Editor
           height="100%"
-          language={languageId===70?"python":languageId===60 ? "go" : "javascript"}
+          language={getMonacoLanguage(languageId)}
           theme="vs-dark"
           options={{
             minimap: { enabled: false },
-            fontSize: 16,
+            fontSize: 15,
+            fontFamily: "'Fira Coda','Consolas',monospace",
+            padding:{top:16},
+            scrollBeyondLastLine:false,
           }}
           onMount={handleEditorDidMount}
           onChange={handleEditorChange}
         />
       </div>
-      <div style={{
-          backgroundColor: '#000000',
-          color: '#00ff00',
-          fontFamily: 'monospace',
-          padding: '15px',
-          height: '200px',
-          overflowY: 'auto',
-          borderTop: '2px solid #333',
-          whiteSpace: 'pre-wrap'
+      <div style={{ 
+          height: isTerminalOpen ? '220px' : '55px', 
+          backgroundColor: '#1e1e1e', 
+          borderTop: '1px solid #3c3c3c', 
+          display: 'flex', 
+          flexDirection: 'column',
+          transition: 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden' 
       }}>
-          {terminalOutput || "> Output will appear here..."}
+        
+        <div 
+          onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+          style={{ 
+            padding: '8px 20px', 
+            borderBottom: isTerminalOpen ? '1px solid #2d2d2d' : 'none', 
+            display: 'flex', 
+            alignItems: 'center',
+            cursor: 'pointer',
+            userSelect: 'none',
+            minHeight: '35px',
+            backgroundColor: '#1e1e1e'
+          }}
+        >
+          <svg 
+            width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style={{ 
+              marginRight: '8px', 
+              transform: isTerminalOpen ? 'rotate(90deg)' : 'rotate(0deg)', 
+              transition: 'transform 0.2s ease' 
+            }}
+          >
+            <path d="M6 4L10 8L6 12" stroke="#888888" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+
+          <span style={{ color: '#e0e0e0', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
+            Terminal Output
+          </span>
+        </div>
+
+        <div style={{ 
+            flexGrow: 1, 
+            padding: '15px 20px', 
+            overflowY: 'auto', 
+            color: '#d4d4d4', 
+            fontFamily: "'Consolas', 'Courier New', monospace", 
+            fontSize: '14px',
+            lineHeight: '1.5',
+            whiteSpace: 'pre-wrap',
+            textAlign: 'left',  
+            opacity: isTerminalOpen ? 1 : 0,
+            transition: 'opacity 0.2s ease'
+        }}>
+            {terminalOutput || "Ready."}
+        </div>
       </div>
     </div>
   );

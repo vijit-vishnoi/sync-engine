@@ -39,6 +39,9 @@ func (j *JDoodleExecutor) Execute(code string, languageId int) (string, error) {
 		71: "nodejs",
 		60: "go",
 		70: "python3",
+		62: "java",
+		54: "cpp17", 
+		50: "c",
 	}
 
 	langName, exists := langMap[languageId]
