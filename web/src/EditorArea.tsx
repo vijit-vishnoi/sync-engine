@@ -168,42 +168,79 @@ export function EditorArea() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
       
-      <div style={{ padding: '10px 20px', color: 'white', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <h2 style={{ margin: 0 }}>SyncEngine</h2>
-          <span style={{ backgroundColor: '#333', padding: '4px 10px', borderRadius: '4px', fontSize: '14px' }}>
-            Room: {roomId}
+      <div style={{ height: '45px', padding: '0 16px', backgroundColor: '#252526', borderBottom: '1px solid #3c3c3c', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden' }}>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          <span style={{ color: '#e0e0e0', fontSize: '15px', fontWeight: '600', letterSpacing: '0.5px' }}>SyncEngine</span>
+          <div style={{ width: '1px', height: '16px', backgroundColor: '#444' }}></div> 
+          <span style={{ color: '#888888', fontSize: '13px' }}>
+            ID: <span style={{ color: '#d4d4d4', fontFamily: "'Consolas', monospace" }}>{roomId}</span>
           </span>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <select 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isConnected ? '#4caf50' : '#f44336', flexShrink: 0 }}></div>
+            <span style={{ color: '#cccccc', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+              {displayName}
+            </span>
+          </div>
+
+          <div style={{ width: '1px', height: '16px', backgroundColor: '#444' }}></div> 
+          <select 
             value={languageId} 
             onChange={(e) => setLanguageId(Number(e.target.value))}
-            style={{ backgroundColor: '#333', color: 'white', border: '1px solid #555', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer' }}
+            style={{ 
+              backgroundColor: '#333333', 
+              color: '#d4d4d4', 
+              border: '1px solid #444444', 
+              borderRadius: '4px',
+              padding: '4px 8px',
+              cursor: 'pointer', 
+              fontSize: '12px', 
+              outline: 'none', 
+              fontFamily: "'Inter', system-ui, sans-serif"
+            }}
           >
             <option value={71}>JavaScript</option>
-            <option value={70}>Python 3</option>
+            <option value={70}>Python</option>
             <option value={60}>Go</option>
+            <option value={62}>Java</option>
+            <option value={54}>C++</option>
+            <option value={50}>C</option>
           </select>
+
           <button 
             onClick={handleRunCode} 
             disabled={isExecuting}
-            style={{ backgroundColor: isExecuting ? 'gray' : '#4CAF50', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: isExecuting ? 'not-allowed' : 'pointer' }}
+            title="Run Code"
+            style={{ 
+              backgroundColor: 'transparent', border: 'none', 
+              cursor: isExecuting ? 'not-allowed' : 'pointer', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              padding: '4px', opacity: isExecuting ? 0.5 : 1
+            }}
           >
-            {isExecuting ? 'Running...' : '▶ Run Code'}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
           </button>
-          <span style={{ color: isConnected ? '#4caf50' : '#f44336', fontSize: '14px' }}>
-            ● {isConnected ? 'Connected' : 'Disconnected'}
-          </span>
-          <span style={{ color: '#888', fontSize: '14px' }}>
-            Typing as: <strong style={{color: 'white'}}>{displayName}</strong>
-          </span>
+
+          <div style={{ width: '1px', height: '16px', backgroundColor: '#444' }}></div> 
           <button 
             onClick={leaveRoom}
-            style={{ backgroundColor: '#f44336', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
+            title="Leave Room"
+            style={{ 
+              backgroundColor: 'transparent', border: 'none', 
+              cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' 
+            }}
           >
-            Leave Room
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
           </button>
         </div>
       </div>
