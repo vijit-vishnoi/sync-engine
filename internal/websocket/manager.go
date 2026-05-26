@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"sync"
+	"time"
 
 	"github.com/vijit-vishnoi/internal/executor"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -11,6 +12,8 @@ type RoomManager struct{
 	collection *mongo.Collection
 	mutex sync.RWMutex
 	executor executor.CodeExecutor
+	LastExuecution map[string]time.Time
+	ExecMutex	sync.Mutex
 }
 
 func NewRoomManager(collection *mongo.Collection,exec executor.CodeExecutor) *RoomManager{
@@ -18,6 +21,7 @@ func NewRoomManager(collection *mongo.Collection,exec executor.CodeExecutor) *Ro
 		rooms: make(map[string]*Hub),
 		collection: collection,
 		executor: exec,
+		LastExuecution: make(map[string]time.Time),
 	}
 }
 

@@ -24,6 +24,7 @@ type Hub struct {
 	needsSaving bool 
 	roomId string
 	executor executor.CodeExecutor
+	LastExuecution time.Time
 }
 
 type Client struct {
@@ -95,6 +96,18 @@ func (h *Hub)Run(){
 					h.document.Delete(syncMsg.Char)
 					h.needsSaving=true
 				case "execute":
+					if time.Since(h.LastExuecution)<2*time.Second{
+						errMssg:=SyncMessage{
+							Type:"terminal_output",
+							Output:"System: Cooldown active. Please wait 2 seconds before running again.",
+						}
+						errBytes,marshalErr:=json.Marshal(errMssg)
+						if marshalErr==nil{
+							message=errBytes
+						}
+						break
+					}
+					h.LastExuecution=time.Now()
 					codeString:=h.document.ToString()
 					result,err:=h.executor.Execute(codeString,syncMsg.LanguageID)
 					if err!=nil{
