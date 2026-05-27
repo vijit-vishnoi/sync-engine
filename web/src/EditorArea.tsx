@@ -93,9 +93,14 @@ export function EditorArea() {
   const [languageId,setLanguageId]=useState<number>(71);
 
   const [isTerminalOpen,setIsTerminalOpen]=useState<boolean>(true);
+  const [cooldown, setCooldown] = useState<number>(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);  const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!, handleRemoteMessage);
 
-  const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!, handleRemoteMessage);
-  
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    };
+  }, []);
   useEffect(() => {
     if (!engineRef.current && initialDoc !== null) {
       console.log("Initializing CRDT Engine with server state...");
@@ -159,11 +164,24 @@ export function EditorArea() {
     });
   };
   const handleRunCode = () => {
+    if (cooldown > 0) return;
     setIsExecuting(true);
     setIsTerminalOpen(true);
     setTerminalOutput("Executing code in the cloud...");
     
     broadcastExecute(languageId);
+    setCooldown(2);
+    if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    
+    cooldownTimerRef.current = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownTimerRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 };
   return (
     <div className="editor-layout">
@@ -200,13 +218,20 @@ export function EditorArea() {
 
           <button 
             onClick={handleRunCode} 
-            disabled={isExecuting}
-            title="Run Code"
+            disabled={isExecuting || cooldown > 0}
+            title={cooldown > 0 ? `Cooldown (${cooldown}s)` : "Run Code"}
             className="icon-btn"
+            style={{ opacity: (isExecuting || cooldown > 0) ? 0.5 : 1 }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
+            {cooldown > 0 ? (
+              <span style={{ color: '#89d185', fontSize: '13px', fontWeight: 'bold', fontFamily: "'Consolas', monospace", padding: '0 4px' }}>
+                {cooldown}s
+              </span>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#89d185" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            )}
           </button>
 
           <div className="vertical-divider"></div>
