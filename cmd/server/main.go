@@ -20,7 +20,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Warning: No .env file found. Using system environment variables.")
+		log.Println("Warning: No .env file found. Using system environment variables")
 	}
 
 	clientId := os.Getenv("JDOODLE_CLIENT_ID")
