@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { SyncMessage, CRDTChar } from '../types/crdt';
 
-export function useWebSocket(localSiteId: string, roomId:string,onRemoteMessage:(msg:SyncMessage)=>void) {
+export function useWebSocket(localSiteId: string, roomId:string,displayName:string,onRemoteMessage:(msg:SyncMessage)=>void) {
   const ws = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [initialDoc, setInitialDoc] = useState<CRDTChar[] |null>(null);
@@ -10,7 +10,7 @@ export function useWebSocket(localSiteId: string, roomId:string,onRemoteMessage:
     callbackRef.current=onRemoteMessage;
   },[onRemoteMessage]);
   useEffect(() => {
-    ws.current = new WebSocket(`ws://localhost:8080/ws/${roomId}`);
+    ws.current = new WebSocket(`ws://localhost:8080/ws/${roomId}?siteId=${localSiteId}&name=${encodeURIComponent(displayName)}`);
 
     ws.current.onopen = () => {
       console.log('Connected to SyncEngine Hub');
@@ -30,6 +30,8 @@ export function useWebSocket(localSiteId: string, roomId:string,onRemoteMessage:
         return;
       }
 
+      if(message.type!=='presence_state' && message.senderId===localSiteId) return 
+
       if (message.senderId === localSiteId) {
         return; 
       }
@@ -40,7 +42,7 @@ export function useWebSocket(localSiteId: string, roomId:string,onRemoteMessage:
     return () => {
       ws.current?.close();
     };
-  }, [localSiteId]);
+  }, [localSiteId,roomId,displayName]);
 
   const broadcastOperation = useCallback((type: 'insert' | 'delete', char: CRDTChar) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {

@@ -44,7 +44,7 @@ type SyncMessage struct{
 	DisplayName string	`json:"displayName,omitempty"`
 	LanguageID int `json:"languageId,omitempty"`
 	Output string `json:"output,omitempty"`
-	ActiveUsers map[string]string
+	ActiveUsers map[string]string `json:"activeUsers"`
 }
 
 type MongoDocument struct{

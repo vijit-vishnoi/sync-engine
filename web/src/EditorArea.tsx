@@ -27,8 +27,29 @@ export function EditorArea() {
   const monacoRef = useRef<any>(null);
   const isRemoteUpdate = useRef(false);
   const remoteCursorsRef=useRef<{[key:string]:any}>({});
+
+  const [terminalOutput, setTerminalOutput] = useState<string>("");
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [languageId,setLanguageId]=useState<number>(71);
+
+  const [isTerminalOpen,setIsTerminalOpen]=useState<boolean>(true);
+  const [cooldown, setCooldown] = useState<number>(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  const [activeUsers,setActiveUsers]=useState<{[key:string]:{name:string}}>({});
   const handleRemoteMessage = useCallback((remoteOperation: SyncMessage) => {
-    if (!remoteOperation || !engineRef.current || !monacoRef.current) return;
+    if (!remoteOperation ) return;
+    if(remoteOperation.type==='presence_state' && remoteOperation.activeUsers){
+      const newUsersObj:{[key:string]:{name:string}}={};
+      Object.entries(remoteOperation.activeUsers).forEach(([id,name])=>{
+        if(id!==siteId){
+          newUsersObj[id]={name:name as string};
+        }
+      });
+      setActiveUsers(newUsersObj);
+      return;
+    }
+    if(!engineRef.current || !monacoRef.current) return 
     const engine = engineRef.current;
     const editor = monacoRef.current;
     const model = editor.getModel();
@@ -86,15 +107,9 @@ export function EditorArea() {
     }finally {
       isRemoteUpdate.current = false;
     }
-  }, []);
+  }, [siteId]);
+  const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!,displayName, handleRemoteMessage);
 
-  const [terminalOutput, setTerminalOutput] = useState<string>("");
-  const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [languageId,setLanguageId]=useState<number>(71);
-
-  const [isTerminalOpen,setIsTerminalOpen]=useState<boolean>(true);
-  const [cooldown, setCooldown] = useState<number>(0);
-  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);  const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!, handleRemoteMessage);
 
   useEffect(() => {
     return () => {
@@ -196,9 +211,49 @@ export function EditorArea() {
         </div>
         
         <div className="top-bar-group right">
-          <div className="user-status-group">
-            <div className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></div>
-            <span className="username-display" title={displayName}>{displayName}</span>
+          <div className="user-status-group" style={{ gap: '0' }}>
+            
+            {Object.entries(activeUsers).map(([id, user], index) => {
+              let hash = 0;
+              for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+              const colors = ['#FF5F56', '#FFBD2E', '#27C93F', '#0070F3', '#F81CE5'];
+              const color = colors[Math.abs(hash) % colors.length];
+
+              return (
+                <div 
+                  key={id} title={user.name}
+                  style={{
+                    width: '28px', height: '28px', borderRadius: '50%', backgroundColor: color,
+                    color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '11px', fontWeight: 'bold', border: '2px solid #252526',
+                    marginLeft: index === 0 ? '0' : '-8px', zIndex: 10 - index
+                  }}
+                >
+                  {user.name.substring(0, 2).toUpperCase()}
+                </div>
+              );
+            })}
+            
+            <div 
+              title={`${displayName} (You)`}
+              style={{
+                width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#555',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '11px', fontWeight: 'bold', border: '2px solid #252526',
+                marginLeft: Object.keys(activeUsers).length > 0 ? '-8px' : '0', zIndex: 0
+              }}
+            >
+              {displayName.substring(0, 2).toUpperCase()}
+            </div>
+            
+            <div 
+              title={isConnected ? 'Connected' : 'Disconnected'}
+              style={{
+                width: '10px', height: '10px', borderRadius: '50%', 
+                backgroundColor: isConnected ? '#4caf50' : '#f44336', 
+                marginLeft: '10px', border: '2px solid #252526'
+              }}
+            ></div>
           </div>
 
           <div className="vertical-divider"></div>
