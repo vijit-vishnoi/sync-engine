@@ -213,7 +213,7 @@ export function EditorArea() {
         <div className="top-bar-group right">
           <div className="user-status-group" style={{ gap: '0' }}>
             
-            {Object.entries(activeUsers).map(([id, user], index) => {
+            {Object.entries(activeUsers).slice(0,4).map(([id, user], index) => {
               let hash = 0;
               for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
               const colors = ['#FF5F56', '#FFBD2E', '#27C93F', '#0070F3', '#F81CE5'];
@@ -233,7 +233,19 @@ export function EditorArea() {
                 </div>
               );
             })}
-            
+            {Object.keys(activeUsers).length > 4 && (
+              <div 
+                title={`${Object.keys(activeUsers).length - 4} more users`}
+                style={{
+                  width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#333',
+                  color: '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '11px', fontWeight: 'bold', border: '2px solid #252526',
+                  marginLeft: '-8px', zIndex: 5
+                }}
+              >
+                +{Object.keys(activeUsers).length - 4}
+              </div>
+            )}
             <div 
               title={`${displayName} (You)`}
               style={{
