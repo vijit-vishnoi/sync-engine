@@ -7,6 +7,8 @@ import (
 )
 
 func HandleConnection(hub *Hub,w http.ResponseWriter,r *http.Request){
+	siteId:=r.URL.Query().Get("siteId")
+	name:=r.URL.Query().Get("name")
 	conn,err:=upgrader.Upgrade(w,r,nil)
 	if err!=nil{
 		log.Println(err)
@@ -16,6 +18,8 @@ func HandleConnection(hub *Hub,w http.ResponseWriter,r *http.Request){
 		hub:hub,
 		conn:conn,
 		send:make(chan []byte,256),
+		SiteID: siteId,
+		DisplayName: name,
 	}
 	client.hub.register<-client
 	defer func ()  {
