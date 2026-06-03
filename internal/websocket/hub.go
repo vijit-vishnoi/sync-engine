@@ -31,6 +31,8 @@ type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
+	SiteID string 
+	DisplayName string 
 }
 type SyncMessage struct{
 	Type string `json:"type"`
@@ -42,6 +44,7 @@ type SyncMessage struct{
 	DisplayName string	`json:"displayName,omitempty"`
 	LanguageID int `json:"languageId,omitempty"`
 	Output string `json:"output,omitempty"`
+	ActiveUsers map[string]string
 }
 
 type MongoDocument struct{
@@ -78,10 +81,12 @@ func (h *Hub)Run(){
 			if err==nil{
 				client.send<-initBytes
 			}
+			h.broadcastPresenceState()
 		case client:=<-h.unregister:
 			if _,ok:=h.clients[client];ok{
 				delete(h.clients,client)
 				close(client.send)
+				h.broadcastPresenceState()
 			}
 			 
 		case message:=<-h.broadcast:
@@ -180,5 +185,29 @@ func (h *Hub) saveDocument(){
 		log.Println("Failed to auto-save to MongoDB: ",err)
 	} else{
 		log.Println("Auto-saved document to MongoDB!")
+	}
+}
+
+func (h *Hub) broadcastPresenceState(){
+	users:=make(map[string]string)
+	for client:=range h.clients{
+		if client.SiteID!=""{
+			users[client.SiteID]=client.DisplayName
+		}
+	}
+	msg:=SyncMessage{
+		Type:"presence_state",
+		ActiveUsers: users,
+	}
+	bytes,err:=json.Marshal(msg)
+	if err==nil{
+		for client:=range h.clients{
+			select{
+			case client.send<-bytes:
+			default:
+					close(client.send)
+					delete(h.clients,client)
+			}
+		}
 	}
 }
