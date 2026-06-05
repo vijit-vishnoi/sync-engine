@@ -18,6 +18,7 @@ import (
 type Hub struct {
 	clients    map[*Client]bool
 	broadcast  chan []byte
+	forward	   chan []byte
 	register   chan *Client
 	unregister chan *Client
 	document *crdt.Document
@@ -64,6 +65,7 @@ func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecuto
 		unregister: make(chan *Client),
 		clients: make(map[*Client]bool),
 		broadcast: make(chan []byte),
+		forward: make(chan []byte),
 		document: &crdt.Document{},
 		collection: collection,
 		roomId: roomId,
@@ -73,12 +75,12 @@ func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecuto
 	}
 	h.loadDocument()
 
-	go h.subsctibeToReddis()
+	go h.subscribeToReddis()
 
 	return h
 }
 
-func (h *Hub)subsctibeToReddis(){
+func (h *Hub)subscribeToReddis(){
 	pubsub:=h.redisClient.Subscribe(h.ctx,"room:"+h.roomId)
 	defer pubsub.Close()
 
@@ -88,6 +90,19 @@ func (h *Hub)subsctibeToReddis(){
 		h.broadcast<-[]byte(msg.Payload)
 	}
 }
+
+func (h *Hub)publishPresenceState(){
+	users,err:=h.redisClient.HGetAll(h.ctx,"room_users:"+h.roomId).Result()
+	if err==nil{
+		msg:=SyncMessage{
+			Type:	"presence_state",
+			ActiveUsers:users,
+		}
+		bytes,_:=json.Marshal(msg)
+		h.redisClient.Publish(h.ctx,"room:"+h.roomId,bytes)
+	}
+}
+
 func (h *Hub)Run(){
 	ticker:=time.NewTicker(5*time.Second)
 	defer ticker.Stop()
@@ -103,26 +118,25 @@ func (h *Hub)Run(){
 			if err==nil{
 				client.send<-initBytes
 			}
-			h.broadcastPresenceState()
+			if client.SiteID!=""{
+				h.redisClient.HSet(h.ctx,"room_users:"+h.roomId,client.SiteID,client.DisplayName)
+			}
+			h.publishPresenceState()
 		case client:=<-h.unregister:
 			if _,ok:=h.clients[client];ok{
 				delete(h.clients,client)
 				close(client.send)
-				h.broadcastPresenceState()
+				if client.SiteID!=""{
+					h.redisClient.HDel(h.ctx,"room_users:"+h.roomId,client.SiteID)
+				}
+				h.publishPresenceState()
 			}
 			 
-		case message:=<-h.broadcast:
+		case message:=<-h.forward:
 			var syncMsg SyncMessage
 			err:=json.Unmarshal(message,&syncMsg)
 			if err==nil{
-				switch syncMsg.Type {
-				case "insert":
-					h.document.Insert(syncMsg.Char)
-					h.needsSaving=true
-				case "delete":
-					h.document.Delete(syncMsg.Char)
-					h.needsSaving=true
-				case "execute":
+				if syncMsg.Type=="execute"{
 					if time.Since(h.LastExuecution)<2*time.Second{
 						errMssg:=SyncMessage{
 							Type:"terminal_output",
@@ -130,9 +144,9 @@ func (h *Hub)Run(){
 						}
 						errBytes,marshalErr:=json.Marshal(errMssg)
 						if marshalErr==nil{
-							message=errBytes
+							h.redisClient.Publish(h.ctx, "room:"+h.roomId, errBytes)
 						}
-						break
+						continue
 					}
 					h.LastExuecution=time.Now()
 					codeString:=h.document.ToString()
@@ -146,21 +160,39 @@ func (h *Hub)Run(){
 					}
 					outputBytes,marshalErr:=json.Marshal(outputMsg)
 					if marshalErr==nil{
-						message=outputBytes
-					}
-				case "cursor":
-				}
+						h.redisClient.Publish(h.ctx,"room:"+h.roomId,outputBytes)
+					}		
 			}else{
-				log.Println("Error parsing message:",err)
+				h.redisClient.Publish(h.ctx,"room:"+h.roomId,message)
 			}
-			for client:=range h.clients{
-				select {
-				case client.send<-message:
-				default:
-					close(client.send)
-					delete(h.clients,client)
-				}
+		} else{
+			log.Println("Error parsing message:",err)
+		}
+
+		case message := <-h.broadcast:
+		var syncMsg SyncMessage
+		err := json.Unmarshal(message, &syncMsg)
+		if err == nil {
+			switch syncMsg.Type {
+			case "insert":
+				h.document.Insert(syncMsg.Char)
+				h.needsSaving = true
+			case "delete":
+				h.document.Delete(syncMsg.Char)
+				h.needsSaving = true
 			}
+		} else {
+			log.Println("Error parsing broadcast message:", err)
+		}
+		
+		for client:=range h.clients{
+			select {
+			case client.send<-message:
+			default:
+				close(client.send)
+				delete(h.clients,client)
+			}
+		}
 		case <-ticker.C:
 			if h.needsSaving{
 				h.saveDocument()
@@ -207,29 +239,5 @@ func (h *Hub) saveDocument(){
 		log.Println("Failed to auto-save to MongoDB: ",err)
 	} else{
 		log.Println("Auto-saved document to MongoDB!")
-	}
-}
-
-func (h *Hub) broadcastPresenceState(){
-	users:=make(map[string]string)
-	for client:=range h.clients{
-		if client.SiteID!=""{
-			users[client.SiteID]=client.DisplayName
-		}
-	}
-	msg:=SyncMessage{
-		Type:"presence_state",
-		ActiveUsers: users,
-	}
-	bytes,err:=json.Marshal(msg)
-	if err==nil{
-		for client:=range h.clients{
-			select{
-			case client.send<-bytes:
-			default:
-					close(client.send)
-					delete(h.clients,client)
-			}
-		}
 	}
 }

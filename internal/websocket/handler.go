@@ -36,7 +36,7 @@ func (c *Client) readPump(){
 			log.Println(err) 
 			return
 		}
-		c.hub.broadcast<-p
+		c.hub.forward<-p
 	}
 }
 func (c *Client) writePump(){
