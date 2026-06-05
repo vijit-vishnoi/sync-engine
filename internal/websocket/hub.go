@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
 	"github.com/vijit-vishnoi/internal/crdt"
 	"github.com/vijit-vishnoi/internal/executor"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -25,6 +26,8 @@ type Hub struct {
 	roomId string
 	executor executor.CodeExecutor
 	LastExuecution time.Time
+	redisClient *redis.Client
+	ctx context.Context
 }
 
 type Client struct {
@@ -53,6 +56,9 @@ type MongoDocument struct{
 }
 
 func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecutor) *Hub{
+	rdb:=redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
 	h:=&Hub{
 		register: make(chan *Client),
 		unregister: make(chan *Client),
@@ -62,9 +68,25 @@ func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecuto
 		collection: collection,
 		roomId: roomId,
 		executor:exec,
+		redisClient: rdb,
+		ctx: context.Background(),
 	}
 	h.loadDocument()
+
+	go h.subsctibeToReddis()
+
 	return h
+}
+
+func (h *Hub)subsctibeToReddis(){
+	pubsub:=h.redisClient.Subscribe(h.ctx,"room:"+h.roomId)
+	defer pubsub.Close()
+
+	ch:=pubsub.Channel()
+
+	for msg:=range ch{
+		h.broadcast<-[]byte(msg.Payload)
+	}
 }
 func (h *Hub)Run(){
 	ticker:=time.NewTicker(5*time.Second)
