@@ -58,7 +58,7 @@ type MongoDocument struct{
 
 func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecutor) *Hub{
 	rdb:=redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "127.0.0.1:6379",
 	})
 	h:=&Hub{
 		register: make(chan *Client),
