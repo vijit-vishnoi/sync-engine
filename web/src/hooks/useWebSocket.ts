@@ -12,14 +12,30 @@ export function useWebSocket(localSiteId: string, roomId:string,displayName:stri
   useEffect(() => {
     ws.current = new WebSocket(`ws://localhost:8080/ws/${roomId}?siteId=${localSiteId}&name=${encodeURIComponent(displayName)}`);
 
+    let hearbeatInterval: ReturnType<typeof setInterval>;
     ws.current.onopen = () => {
       console.log('Connected to SyncEngine Hub');
       setIsConnected(true);
     };
 
+    ws.current.onopen=()=>{
+      console.log('Connected to SyncEngine Hub');
+      setIsConnected(true);
+
+      hearbeatInterval=setInterval(() => {
+        if(ws.current?.readyState===WebSocket.OPEN){
+          ws.current.send(JSON.stringify({
+            type:'heartbeat',
+            senderId:localSiteId,
+            displayName:displayName
+          }));
+        }
+      },5000);
+    }
     ws.current.onclose = () => {
       console.log('Disconnected from SyncEngine Hub');
       setIsConnected(false);
+      clearInterval(hearbeatInterval);
     };
 
     ws.current.onmessage = (event) => {
@@ -32,14 +48,12 @@ export function useWebSocket(localSiteId: string, roomId:string,displayName:stri
 
       if(message.type!=='presence_state' && message.senderId===localSiteId) return 
 
-      if (message.senderId === localSiteId) {
-        return; 
-      }
 
       callbackRef.current(message);
     };
 
     return () => {
+      clearInterval(hearbeatInterval);
       ws.current?.close();
     };
   }, [localSiteId,roomId,displayName]);

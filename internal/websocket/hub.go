@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-
+	"strings"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 	"github.com/vijit-vishnoi/internal/crdt"
@@ -92,8 +92,15 @@ func (h *Hub)subscribeToReddis(){
 }
 
 func (h *Hub)publishPresenceState(){
-	users,err:=h.redisClient.HGetAll(h.ctx,"room_users:"+h.roomId).Result()
+	members,err:=h.redisClient.ZRange(h.ctx,"room_presence:"+h.roomId,0,-1).Result()
 	if err==nil{
+		users:=make(map[string]string)
+		for _, member:=range members{
+			parts:=strings.Split(member,"|")
+			if len(parts)==2{
+				users[parts[0]]=parts[1]
+			}
+		}
 		msg:=SyncMessage{
 			Type:	"presence_state",
 			ActiveUsers:users,
@@ -119,7 +126,11 @@ func (h *Hub)Run(){
 				client.send<-initBytes
 			}
 			if client.SiteID!=""{
-				h.redisClient.HSet(h.ctx,"room_users:"+h.roomId,client.SiteID,client.DisplayName)
+				member:=client.SiteID+"|"+client.DisplayName
+				h.redisClient.ZAdd(h.ctx,"room_users:"+h.roomId,redis.Z{
+					Score:float64(time.Now().Unix()),
+					Member: member,
+				})
 			}
 			h.publishPresenceState()
 		case client:=<-h.unregister:
@@ -127,7 +138,8 @@ func (h *Hub)Run(){
 				delete(h.clients,client)
 				close(client.send)
 				if client.SiteID!=""{
-					h.redisClient.HDel(h.ctx,"room_users:"+h.roomId,client.SiteID)
+					member:=client.SiteID+"|"+client.DisplayName
+					h.redisClient.ZRem(h.ctx,"room_users:"+h.roomId,member)
 				}
 				h.publishPresenceState()
 			}
@@ -136,6 +148,14 @@ func (h *Hub)Run(){
 			var syncMsg SyncMessage
 			err:=json.Unmarshal(message,&syncMsg)
 			if err==nil{
+				if syncMsg.Type == "heartbeat" {
+                    member := syncMsg.SenderId + "|" + syncMsg.DisplayName
+                    h.redisClient.ZAdd(h.ctx, "room_presence:"+h.roomId, redis.Z{
+                        Score:  float64(time.Now().Unix()),
+                        Member: member,
+                    })
+                    continue 
+                }
 				if syncMsg.Type=="execute"{
 					if time.Since(h.LastExuecution)<2*time.Second{
 						errMssg:=SyncMessage{
@@ -198,6 +218,10 @@ func (h *Hub)Run(){
 				h.saveDocument()
 				h.needsSaving=false
 			}
+			cutoff:=float64(time.Now().Unix()-10)
+			cutoffStr:=fmt.Sprintf("%f",cutoff)
+			h.redisClient.ZRemRangeByScore(h.ctx,"room_presence:"+h.roomId,"-inf",cutoffStr)
+			h.publishPresenceState()
 		}
 	}
 }
