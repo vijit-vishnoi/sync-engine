@@ -214,10 +214,18 @@ func (h *Hub)Run(){
 			}
 		}
 		case <-ticker.C:
-			if h.needsSaving{
-				h.saveDocument()
-				h.needsSaving=false
-			}
+			if h.needsSaving {
+                lockKey := "save_lock:" + h.roomId  
+
+                acquired, err := h.redisClient.SetNX(h.ctx, lockKey, "locked", 3*time.Second).Result()
+                
+                if err == nil && acquired {
+                    h.saveDocument()
+                    h.needsSaving = false
+                } else {
+                    log.Println("Another server is saving room", h.roomId, "-> Skipping Mongo write.")
+                }
+            }
 			cutoff:=float64(time.Now().Unix()-10)
 			cutoffStr:=fmt.Sprintf("%f",cutoff)
 			h.redisClient.ZRemRangeByScore(h.ctx,"room_presence:"+h.roomId,"-inf",cutoffStr)
