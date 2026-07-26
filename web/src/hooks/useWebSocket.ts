@@ -10,8 +10,10 @@ export function useWebSocket(localSiteId: string, roomId:string,displayName:stri
     callbackRef.current=onRemoteMessage;
   },[onRemoteMessage]);
   useEffect(() => {
-    ws.current = new WebSocket(`ws://localhost:8080/ws/${roomId}?siteId=${localSiteId}&name=${encodeURIComponent(displayName)}`);
+    const backendUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
 
+    ws.current = new WebSocket(`${backendUrl}/ws/${roomId}?siteId=${localSiteId}&name=${encodeURIComponent(displayName)}`);
+    
     let hearbeatInterval: ReturnType<typeof setInterval>;
     ws.current.onopen = () => {
       console.log('Connected to SyncEngine Hub');

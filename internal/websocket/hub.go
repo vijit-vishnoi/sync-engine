@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
+	"os"
 	"strings"
+	"time"
+
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 	"github.com/vijit-vishnoi/internal/crdt"
@@ -57,9 +59,17 @@ type MongoDocument struct{
 }
 
 func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecutor) *Hub{
-	rdb:=redis.NewClient(&redis.Options{
-		Addr: "127.0.0.1:6379",
-	})
+	redisAddr := os.Getenv("REDIS_URL")
+    if redisAddr == "" {
+        redisAddr = "127.0.0.1:6379" 
+    }
+    
+    redisPassword := os.Getenv("REDIS_PASSWORD")
+
+    rdb := redis.NewClient(&redis.Options{
+        Addr:     redisAddr,
+        Password: redisPassword,
+    })
 	h:=&Hub{
 		register: make(chan *Client),
 		unregister: make(chan *Client),
