@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 	"time"
-
+	"crypto/tls"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 	"github.com/vijit-vishnoi/internal/crdt"
@@ -69,6 +69,9 @@ func NewHub(collection *mongo.Collection,roomId string,exec executor.CodeExecuto
     rdb := redis.NewClient(&redis.Options{
         Addr:     redisAddr,
         Password: redisPassword,
+		TLSConfig: &tls.Config{
+            MinVersion: tls.VersionTLS12,
+        },
     })
 	h:=&Hub{
 		register: make(chan *Client),
