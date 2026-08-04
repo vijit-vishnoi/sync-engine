@@ -182,33 +182,6 @@ export function EditorArea() {
     });
   };
 
-  const handleEditorChange = (_value: string | undefined, event: any) => {
-    const engine = engineRef.current;
-    if (!engine) return;
-    if (isRemoteUpdate.current) return;
-    
-    event.changes.forEach((change: any) => {
-      const index = change.rangeOffset;
-      const text = change.text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      const length = change.rangeLength;
-      
-      if (length > 0) {
-        for (let i = 0; i < length; i++) {
-          const deleteChar = engine.localDelete(index);
-          if (deleteChar) broadcastOperation('delete', deleteChar);
-        }
-      }
-      if (text.length > 0) {
-        let currentInsertIndex=index;
-        for (let i = 0; i < text.length; i++) {
-          const charValue = text.charCodeAt(i);
-          let newChar = engine.localInsert(currentInsertIndex, charValue);
-          broadcastOperation('insert', newChar);
-          currentInsertIndex++;
-        }
-      }
-    });
-  };
   const handleRunCode = () => {
     if (cooldown > 0) return;
     setIsExecuting(true);
