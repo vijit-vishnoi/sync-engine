@@ -66,7 +66,12 @@ export function useWebSocket(localSiteId: string, roomId:string,displayName:stri
       ws.current.send(JSON.stringify(message));
     }
   }, [localSiteId]);
-
+  const broadcastBatchOperation = useCallback((type: 'insert_batch' | 'delete_batch', chars: CRDTChar[]) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      const message: SyncMessage = { type, chars, senderId: localSiteId };
+      ws.current.send(JSON.stringify(message));
+    }
+  }, [localSiteId]);
   const broadcastCursor=useCallback((lineNumber:number, column:number,displayName:string)=>{
     if(ws.current && ws.current.readyState===WebSocket.OPEN){
       const message:SyncMessage={
@@ -95,6 +100,7 @@ export function useWebSocket(localSiteId: string, roomId:string,displayName:stri
     isConnected,
     initialDoc,
     broadcastOperation,
+    broadcastBatchOperation,
     broadcastCursor,
     broadcastExecute
   };

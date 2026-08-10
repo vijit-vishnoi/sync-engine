@@ -43,6 +43,7 @@ type Client struct {
 type SyncMessage struct{
 	Type string `json:"type"`
 	Char crdt.Char `json:"char,omitempty"`
+	Chars []crdt.Char `json:"chars,omitempty"`
 	FullDoc []crdt.Char `json:"fullDoc,omitempty"`
 	SenderId string `json:"senderId,omitempty"`
 	LineNumber int `json:"lineNumber,omitempty"`
@@ -212,6 +213,17 @@ func (h *Hub)Run(){
 				h.needsSaving = true
 			case "delete":
 				h.document.Delete(syncMsg.Char)
+				h.needsSaving = true
+			
+			case "insert_batch":
+            for _, char := range syncMsg.Chars {
+                h.document.Insert(char)
+            }
+            h.needsSaving = true
+			case "delete_batch":
+				for _, char := range syncMsg.Chars {
+					h.document.Delete(char)
+				}
 				h.needsSaving = true
 			}
 		} else {

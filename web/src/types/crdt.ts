@@ -9,8 +9,9 @@ export interface CRDTChar {
 }
 
 export interface SyncMessage {
-  type: 'init' | 'insert' | 'delete' |'cursor' | 'execute'| 'terminal_output'| 'presence_state';
+  type: 'init' | 'insert' | 'delete' | 'insert_batch' | 'delete_batch' |'cursor' | 'execute'| 'terminal_output'| 'presence_state';
   char?: CRDTChar;
+  chars?:CRDTChar[];
   fullDoc?: CRDTChar[];
   senderId?:string;
   lineNumber?:number;

@@ -3,7 +3,7 @@ import Editor from '@monaco-editor/react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { CRDTEngine } from './core/engine';
 import { useRoom } from './context/RoomContext';
-import type { SyncMessage } from './types/crdt';
+import type { SyncMessage,CRDTChar } from './types/crdt';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -21,7 +21,9 @@ const getMonacoLanguage = (id: number) => {
 };
 export function EditorArea() {
   const { roomId, displayName, leaveRoom } = useRoom();
-  
+  const insertBufferRef = useRef<CRDTChar[]>([]);
+  const deleteBufferRef = useRef<CRDTChar[]>([]);
+  const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [siteId] = useState(generateId());
   const engineRef = useRef<CRDTEngine | null>(null);
   const monacoRef = useRef<any>(null);
@@ -104,11 +106,35 @@ export function EditorArea() {
           setIsExecuting(false);
           setTerminalOutput(remoteOperation.output ||"Execution finished.");
       } 
+      else if (remoteOperation.type === 'insert_batch' && remoteOperation.chars) {
+        remoteOperation.chars.forEach(char => {
+          const idx = engine.remoteInsert(char);
+          const pos = model.getPositionAt(idx);
+          editor.executeEdits("remote", [{
+            range: { startLineNumber: pos.lineNumber, startColumn: pos.column, endLineNumber: pos.lineNumber, endColumn: pos.column },
+            text: String.fromCharCode(char.value),
+            forceMoveMarkers: true
+          }]);
+        });
+      }
+      else if (remoteOperation.type === 'delete_batch' && remoteOperation.chars) {
+        remoteOperation.chars.forEach(char => {
+          const idx = engine.remoteDelete(char);
+          if (idx !== -1) {
+            const startPos = model.getPositionAt(idx);
+            const endPos = model.getPositionAt(idx + 1);
+            editor.executeEdits("remote", [{
+              range: { startLineNumber: startPos.lineNumber, startColumn: startPos.column, endLineNumber: endPos.lineNumber, endColumn: endPos.column },
+              text: ""
+            }]);
+          }
+        });
+      }
     }finally {
       isRemoteUpdate.current = false;
     }
   }, [siteId]);
-  const { isConnected, initialDoc, broadcastOperation,broadcastCursor,broadcastExecute } = useWebSocket(siteId, roomId!,displayName, handleRemoteMessage);
+  const { isConnected, initialDoc, broadcastOperation, broadcastBatchOperation, broadcastCursor, broadcastExecute } = useWebSocket(siteId, roomId!, displayName, handleRemoteMessage);
 
 
   useEffect(() => {
@@ -131,6 +157,28 @@ export function EditorArea() {
       }
     }
   }, [initialDoc, siteId]);
+
+  const flushBuffers = useCallback(() => {
+    if (insertBufferRef.current.length > 0) {
+      if (insertBufferRef.current.length === 1) {
+        broadcastOperation('insert', insertBufferRef.current[0]);
+      } else {
+        broadcastBatchOperation('insert_batch', [...insertBufferRef.current]);
+      }
+      insertBufferRef.current = []; 
+    }
+    
+    if (deleteBufferRef.current.length > 0) {
+      if (deleteBufferRef.current.length === 1) {
+        broadcastOperation('delete', deleteBufferRef.current[0]);
+      } else {
+        broadcastBatchOperation('delete_batch', [...deleteBufferRef.current]);
+      }
+      deleteBufferRef.current = []; 
+    }
+    
+    flushTimeoutRef.current = null;
+  }, [broadcastOperation, broadcastBatchOperation]);
 
   const handleEditorDidMount = (editor: any) => {
     monacoRef.current = editor;
@@ -160,16 +208,25 @@ export function EditorArea() {
         if (length > 0) {
           for (let i = 0; i < length; i++) {
             const deleteChar = engine.localDelete(index);
-            if (deleteChar) broadcastOperation('delete', deleteChar);
+            if (deleteChar) deleteBufferRef.current.push(deleteChar);
+          }
+          
+          if (!flushTimeoutRef.current) {
+            flushTimeoutRef.current = setTimeout(flushBuffers, 50); 
           }
         }
         if (text.length > 0) {
           let currentInsertIndex = index;
+          
           for (let i = 0; i < text.length; i++) {
             const charValue = text.charCodeAt(i);
             let newChar = engine.localInsert(currentInsertIndex, charValue);
-            broadcastOperation('insert', newChar);
+            insertBufferRef.current.push(newChar);
             currentInsertIndex++;
+          }
+
+          if (!flushTimeoutRef.current) {
+            flushTimeoutRef.current = setTimeout(flushBuffers, 50); 
           }
         }
       });
