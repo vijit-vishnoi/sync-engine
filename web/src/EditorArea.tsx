@@ -5,7 +5,7 @@ import { CRDTEngine } from './core/engine';
 import { useRoom } from './context/RoomContext';
 import type { SyncMessage,CRDTChar } from './types/crdt';
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
+const generateId = () => crypto.randomUUID();
 
 
 const getMonacoLanguage = (id: number) => {
@@ -37,7 +37,16 @@ export function EditorArea() {
   const [isTerminalOpen,setIsTerminalOpen]=useState<boolean>(true);
   const [cooldown, setCooldown] = useState<number>(0);
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
+  const [copied, setCopied] = useState(false);
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(roomId || '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
   const [activeUsers,setActiveUsers]=useState<{[key:string]:{name:string}}>({});
   const handleRemoteMessage = useCallback((remoteOperation: SyncMessage) => {
     if (!remoteOperation ) return;
@@ -266,9 +275,39 @@ export function EditorArea() {
         <div className="top-bar-group">
           <span className="brand-title">SyncEngine</span>
           <div className="vertical-divider"></div>
-          <span className="room-id-display">
-            ID: <span>{roomId}</span>
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#888', fontSize: '13px' }}>
+            <span>ID: {roomId?.substring(0, 8)}...</span>
+            <button 
+              onClick={handleCopyId}
+              title="Copy full Room ID"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                color: copied ? '#4caf50' : '#888',
+                transition: 'color 0.2s'
+              }}
+            >
+              {copied ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              )}
+            </button>
+          </div>
+          {copied && (
+            <div className="toast-notification">
+              Copied
+            </div>
+          )}
         </div>
         
         <div className="top-bar-group right">

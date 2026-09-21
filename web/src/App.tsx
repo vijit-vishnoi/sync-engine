@@ -3,7 +3,7 @@ import { RoomProvider, useRoom } from './context/RoomContext';
 import { EditorArea } from './EditorArea'; 
 import './App.css';
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
+const generateId = () => crypto.randomUUID();
 
 function Lobby() {
   const { joinRoom } = useRoom();
