@@ -15,6 +15,8 @@ The architecture leverages **Conflict-Free Replicated Data Types (CRDTs)** to gu
 
 **Experience it here:** [sync-engine-frontend.vercel.app](https://sync-engine-frontend.vercel.app/)
 
+<img width="1407" height="901" alt="Screenshot 2026-10-27 204951" src="https://github.com/user-attachments/assets/ee505af4-8505-4ee9-aa13-7509a0d8001a" />
+
 ---
 
 ## ✨ Key Features
